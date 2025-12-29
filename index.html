@@ -71,7 +71,18 @@
 
         #info { position: absolute; top: 30px; left: 30px; pointer-events: none; z-index: 20; text-align: left; }
         .stats { font-size: 20px; font-weight: 800; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.7); }
-        .guide-text { position: absolute; bottom: 45px; width: 100%; text-align: center; color: rgba(255,255,255,0.95); font-size: 16px; font-weight: 600; pointer-events: none; z-index: 20; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+        .guide-text { 
+            position: absolute; 
+            bottom: 50px; /* 회색 박스 안쪽으로 이동 */
+            width: 100%; 
+            text-align: center; 
+            color: rgba(255,255,255,0.8); 
+            font-size: 15px; 
+            font-weight: 500; 
+            pointer-events: none; 
+            z-index: 20; 
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4); 
+        }
 
         /* 소원 입력 페이지 */
         #wish-page { background: rgba(10, 10, 10, 0.9); z-index: 70; }
@@ -360,8 +371,27 @@
             ctx.drawImage(bgImg, offsetX, offsetY, drawWidth, drawHeight);
             ctx.restore();
             
-            // 3. 돌탑 캔버스 위에 덮어쓰기 (돌탑은 선명하게)
-            ctx.drawImage(matterCanvas, 0, 0);
+            // 3. 돌탑 캔버스 위에 덮어쓰기 (기반석 하단이 이미지 하단에 오도록 그리기)
+            const isMobile = window.innerWidth <= 500;
+            const baseBottomOffset = isMobile ? 200 : 150;
+            
+            // 기반석의 중심이 stopY(gameHeight - baseBottomOffset)에 있고,
+            // 기반석의 높이가 50px이므로, 기반석의 하단 실제 좌표는 gameHeight - baseBottomOffset + 25 입니다.
+            const baseStoneBottomY = gameHeight - baseBottomOffset + 25;
+            
+            // 캔버스에서 (0, 0)부터 baseStoneBottomY까지의 영역을 캡처하여
+            // 결과 이미지의 하단에 맞춰서 그립니다.
+            const sourceHeight = baseStoneBottomY;
+            const destHeight = tempCanvas.height;
+            const scale = destHeight / sourceHeight;
+            const destWidth = gameWidth * scale;
+            const destX = (tempCanvas.width - destWidth) / 2;
+
+            ctx.drawImage(
+                matterCanvas, 
+                0, 0, gameWidth, sourceHeight, // 소스 영역: 화면 상단부터 기반석 하단까지
+                destX, 0, destWidth, destHeight // 대상 영역: 결과 박스에 꽉 차게 (높이 기준)
+            );
 
             // 4. 최종 이미지 결과물 생성
             finalImg.src = tempCanvas.toDataURL('image/png');
@@ -526,18 +556,16 @@
 
     function initPhysics() {
         const container = document.getElementById('canvas-container');
-        // wrapper의 실제 높이를 가져오되, 모바일에선 window.innerHeight를 우선 고려
         gameWidth = container.clientWidth || window.innerWidth;
         gameHeight = container.clientHeight || window.innerHeight;
         
-        // PC 화면이 아닐 경우(모바일), 하단 여백(Safe Area)을 위한 보정값 적용
         const isMobile = window.innerWidth <= 500;
-        const bottomOffset = isMobile ? 120 : 80; // 모바일에서 더 넉넉하게 위로 올림
+        // 기반석을 더 높게 배치 (모바일 200px, PC 150px 위로)
+        const bottomOffset = isMobile ? 200 : 150; 
 
         engine = Engine.create({ constraintIterations: 30, positionIterations: 30, velocityIterations: 30 });
         engine.world.gravity.y = 2.0;
 
-        // 캔버스 생성
         render = Render.create({
             element: container,
             engine: engine,
@@ -550,11 +578,12 @@
             }
         });
 
-        // 바닥 (위치 보정 적용)
-        ground = Bodies.rectangle(gameWidth / 2, gameHeight - (bottomOffset - 30), gameWidth, 160, { 
+        // 바닥을 화면 하단 끝까지 채우는 거대한 박스로 변경
+        const groundHeight = bottomOffset + 100;
+        ground = Bodies.rectangle(gameWidth / 2, gameHeight + (groundHeight / 2) - (bottomOffset - 25), gameWidth, groundHeight, { 
             isStatic: true, 
             label: 'ground', 
-            render: { fillStyle: '#444' } 
+            render: { fillStyle: '#333' } 
         });
         
         Composite.add(engine.world, [ground]);
@@ -617,14 +646,15 @@
                 if (!body) return;
                 const { x, y } = body.position;
                 
-                // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
-                const isMobile = window.innerWidth <= 500;
-                const stopY = gameHeight - (isMobile ? 120 : 80); 
-                
-                if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
-                    Body.setStatic(body, true);
-                    Body.setPosition(body, { x: gameWidth / 2, y: stopY });
-                }
+            // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
+            const isMobile = window.innerWidth <= 500;
+            const stopOffset = isMobile ? 200 : 150; 
+            const stopY = gameHeight - stopOffset; 
+            
+            if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
+                Body.setStatic(body, true);
+                Body.setPosition(body, { x: gameWidth / 2, y: stopY });
+            }
 
                 if (!body.isStatic) {
                     const isStable = body.speed < 0.3 && body.angularSpeed < 0.05;
@@ -668,7 +698,12 @@
                 context.translate(x, y); 
                 context.rotate(body.angle);
                 
-                // 돌의 표정 그리기 (위치는 중앙)
+                // 돌의 표정 그리기 (기반석과 일반 돌에만 그리기)
+                if (body.label === 'ground') {
+                    context.restore();
+                    return;
+                }
+
                 // 어두운 돌 위에서도 잘 보이도록 표정 색상 조정
                 const fillStyle = body.render.fillStyle;
                 if (fillStyle === 'rainbow') {
