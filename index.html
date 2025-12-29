@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>마음 쌓기 - 디지털 돌탑</title>
     <script src="https://cdn.jsdelivr.net/npm/poly-decomp@0.3.0/dist/poly-decomp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
@@ -16,7 +16,7 @@
             width: 100%; 
             max-width: 500px; 
             height: 100vh;
-            height: 100dvh; /* 최신 브라우저용 동적 높이 */
+            height: calc(var(--vh, 1vh) * 100); /* 자바스크립트로 계산된 높이 사용 */
             background: #0a0a0a; 
             overflow: hidden; 
             display: flex;
@@ -278,17 +278,26 @@
     let gameHeight = 800;
 
     window.onload = () => {
-        // poly-decomp 라이브러리 등록 방식을 더 확실하게 보강
-        const decompLib = window.decomp || (typeof decomp !== 'undefined' ? decomp : null);
-        if (decompLib) {
-            Matter.Common.setDecomp(decompLib);
-        } else {
-            console.error("poly-decomp 라이브러리를 찾을 수 없습니다.");
+            // 모바일 브라우저 높이 문제 해결을 위한 함수 호출
+            resetScreenHeight();
+            window.addEventListener('resize', resetScreenHeight);
+
+            // poly-decomp 라이브러리 등록 방식을 더 확실하게 보강
+            const decompLib = window.decomp || (typeof decomp !== 'undefined' ? decomp : null);
+            if (decompLib) {
+                Matter.Common.setDecomp(decompLib);
+            } else {
+                console.error("poly-decomp 라이브러리를 찾을 수 없습니다.");
+            }
+            
+            updateEnvironment(1);
+            initPhysics();
+        };
+
+        function resetScreenHeight() {
+            let vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
         }
-        
-        updateEnvironment(1);
-        initPhysics();
-    };
 
     function showPage(pageId) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -517,8 +526,13 @@
 
     function initPhysics() {
         const container = document.getElementById('canvas-container');
-        gameWidth = container.clientWidth || 450;
-        gameHeight = container.clientHeight || 800;
+        // wrapper의 실제 높이를 가져오되, 모바일에선 window.innerHeight를 우선 고려
+        gameWidth = container.clientWidth || window.innerWidth;
+        gameHeight = container.clientHeight || window.innerHeight;
+        
+        // PC 화면이 아닐 경우(모바일), 하단 여백(Safe Area)을 위한 보정값 적용
+        const isMobile = window.innerWidth <= 500;
+        const bottomOffset = isMobile ? 120 : 80; // 모바일에서 더 넉넉하게 위로 올림
 
         engine = Engine.create({ constraintIterations: 30, positionIterations: 30, velocityIterations: 30 });
         engine.world.gravity.y = 2.0;
@@ -532,17 +546,17 @@
                 height: gameHeight, 
                 wireframes: false, 
                 background: 'transparent',
-                hasBounds: true // [중요] 카메라 이동을 위해 bounds 활성화
+                hasBounds: true 
             }
         });
 
-        // 바닥 
-        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 25, gameWidth, 160, { 
+        // 바닥 (위치 보정 적용)
+        ground = Bodies.rectangle(gameWidth / 2, gameHeight - (bottomOffset - 30), gameWidth, 160, { 
             isStatic: true, 
             label: 'ground', 
             render: { fillStyle: '#444' } 
         });
-        // baseStone은 startGame에서 생성하도록 수정
+        
         Composite.add(engine.world, [ground]);
 
         setupEvents();
@@ -597,18 +611,20 @@
                 context.restore();
             }
 
-        // [바닥/돌] 그리기
-        const allBodies = [ground, ...stones];
-        allBodies.forEach(body => {
-            if (!body) return;
-            const { x, y } = body.position;
-            
-            // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
-            const stopY = gameHeight - 80; // 기존 50 -> 80으로 수정
-            if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
-                Body.setStatic(body, true);
-                Body.setPosition(body, { x: gameWidth / 2, y: stopY });
-            }
+            // [바닥/돌] 그리기
+            const allBodies = [ground, ...stones];
+            allBodies.forEach(body => {
+                if (!body) return;
+                const { x, y } = body.position;
+                
+                // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
+                const isMobile = window.innerWidth <= 500;
+                const stopY = gameHeight - (isMobile ? 120 : 80); 
+                
+                if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
+                    Body.setStatic(body, true);
+                    Body.setPosition(body, { x: gameWidth / 2, y: stopY });
+                }
 
                 if (!body.isStatic) {
                     const isStable = body.speed < 0.3 && body.angularSpeed < 0.05;
