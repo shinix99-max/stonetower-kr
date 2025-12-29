@@ -15,7 +15,8 @@
             position: relative; 
             width: 100%; 
             max-width: 500px; 
-            height: 100vh; 
+            height: 100vh;
+            height: 100dvh; /* 최신 브라우저용 동적 높이 */
             background: #0a0a0a; 
             overflow: hidden; 
             display: flex;
@@ -26,6 +27,7 @@
         @media (min-width: 501px) {
             #game-wrapper {
                 height: 90vh;
+                height: 90dvh;
                 border-radius: 30px;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.8);
             }
@@ -459,13 +461,15 @@
         // 기반암 생성 및 낙하
         const baseWidth = 160;
         const baseHeight = 50;
+        const targetY = gameHeight - 80; // 바닥에서 조금 더 위로 (기존 50 -> 80)
+        
         baseStone = Bodies.rectangle(gameWidth / 2, -50, baseWidth, baseHeight, { 
-            friction: 2.0, // 마찰력 대폭 강화
-            frictionStatic: 100.0, // 정적 마찰력 대폭 강화
-            density: 200, // 매우 무겁게 설정하여 흔들리지 않게 함
+            friction: 2.0, 
+            frictionStatic: 100.0, 
+            density: 200, 
             chamfer: { radius: 25 }, 
             label: 'baseStone',
-            isStatic: false, // 처음엔 떨어져야 하므로 false
+            isStatic: false, 
             render: { fillStyle: '#dcdcdc' } 
         });
         
@@ -533,7 +537,7 @@
         });
 
         // 바닥 
-        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 50, gameWidth, 160, { 
+        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 25, gameWidth, 160, { 
             isStatic: true, 
             label: 'ground', 
             render: { fillStyle: '#444' } 
@@ -593,17 +597,18 @@
                 context.restore();
             }
 
-            // [바닥/돌] 그리기
-            const allBodies = [ground, ...stones];
-            allBodies.forEach(body => {
-                if (!body) return;
-                const { x, y } = body.position;
-                
-                // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
-                if (body.label === 'baseStone' && !body.isStatic && y >= gameHeight - 50) {
-                    Body.setStatic(body, true);
-                    Body.setPosition(body, { x: gameWidth / 2, y: gameHeight - 50 });
-                }
+        // [바닥/돌] 그리기
+        const allBodies = [ground, ...stones];
+        allBodies.forEach(body => {
+            if (!body) return;
+            const { x, y } = body.position;
+            
+            // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
+            const stopY = gameHeight - 80; // 기존 50 -> 80으로 수정
+            if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
+                Body.setStatic(body, true);
+                Body.setPosition(body, { x: gameWidth / 2, y: stopY });
+            }
 
                 if (!body.isStatic) {
                     const isStable = body.speed < 0.3 && body.angularSpeed < 0.05;
