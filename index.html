@@ -144,6 +144,7 @@
     let gameWidth = 450; let gameHeight = 800;
     let nextStoneData = { w: 0, h: 0 };
     let currentInputPos = { x: 225, y: 320 };
+    let isWishFlow = false; // 소원 빌기 이후: 게임 입력(터치) 차단용
 
     // 전역 함수 등록
     window.showPage = (id) => {
@@ -169,6 +170,8 @@
     };
 
     window.goToWish = async () => {
+        isWishFlow = true;
+        isPressing = false;
         const btn = document.getElementById('wish-btn');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
         
@@ -374,6 +377,7 @@
     }
 
     const handleStart = (e) => {
+        if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (!isGameStarted || isGameOver || e.target.id === 'start-overlay') return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
         const wr = document.getElementById('wish-btn').getBoundingClientRect();
@@ -381,22 +385,35 @@
         if (stones.filter(s => !s.isStatic).length === 0) { isPressing = true; initialTouchX = x; initialTouchY = y; initialStoneX = currentInputPos.x; initialStoneY = currentInputPos.y; checkValidity(); }
     };
     const handleMove = (e) => {
+        if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (!isPressing) return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
         currentInputPos.x = Math.max(50, Math.min(gameWidth - 50, initialStoneX + (x - initialTouchX)));
         currentInputPos.y = Math.max(targetCameraY + 50, Math.min(gameHeight - 250, initialStoneY + (y - initialTouchY)));
         checkValidity();
     };
-    const handleEnd = () => { if (isPressing) { isPressing = false; if (isValidLocation) dropStone(); } };
+    const handleEnd = () => {
+        if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
+        if (isPressing) { isPressing = false; if (isValidLocation) dropStone(); }
+    };
 
     window.onload = () => {
         if (window.decomp) Common.setDecomp(window.decomp);
         resetScreenHeight(); initPhysics(); updateEnvironment(1);
         window.addEventListener('resize', resetScreenHeight);
         window.addEventListener('mousedown', handleStart);
-        window.addEventListener('touchstart', (e) => { if(isGameStarted && e.target.id !== 'wish-btn') e.preventDefault(); handleStart(e); }, {passive: false});
+        window.addEventListener('touchstart', (e) => {
+            const onGamePage = document.getElementById('game-page').classList.contains('active');
+            if (!onGamePage || isWishFlow) return;
+            if (isGameStarted && e.target.id !== 'wish-btn') e.preventDefault();
+            handleStart(e);
+        }, { passive: false });
         window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchmove', (e) => { if(isGameStarted) { e.preventDefault(); handleMove(e); } }, {passive: false});
+        window.addEventListener('touchmove', (e) => {
+            const onGamePage = document.getElementById('game-page').classList.contains('active');
+            if (!onGamePage || isWishFlow) return;
+            if (isGameStarted) { e.preventDefault(); handleMove(e); }
+        }, { passive: false });
         window.addEventListener('mouseup', handleEnd);
         window.addEventListener('touchend', (e) => { if(isGameStarted) handleEnd(); });
     };
