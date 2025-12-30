@@ -331,6 +331,13 @@
     }
 
     async function goToWish() {
+        // [추가] 돌들이 모두 멈춘(Static) 상태인지 확인
+        const activeStones = stones.filter(s => !s.isStatic);
+        if (activeStones.length > 0) {
+            alert("돌들이 아직 움직이고 있습니다. 잠시만 기다려주세요!");
+            return;
+        }
+
         const matterCanvas = document.querySelector('#canvas-container canvas');
         const bgLayer = document.getElementById('bg-layer');
         const finalImg = document.getElementById('final-screenshot');
@@ -560,12 +567,11 @@
 
     function initPhysics() {
         const container = document.getElementById('canvas-container');
-        gameWidth = container.clientWidth || window.innerWidth;
-        gameHeight = container.clientHeight || window.innerHeight;
-        
         const isMobile = window.innerWidth <= 500;
-        // 기반석을 더 높게 배치 (모바일 200px, PC 150px 위로)
-        const bottomOffset = isMobile ? 200 : 150; 
+        
+        // [수정] 숨겨진 컨테이너 대신 실제 가용 영역을 직접 계산 (PC/모바일 대응)
+        gameWidth = isMobile ? window.innerWidth : 500;
+        gameHeight = isMobile ? window.innerHeight : window.innerHeight * 0.9;
 
         engine = Engine.create({ constraintIterations: 30, positionIterations: 30, velocityIterations: 30 });
         engine.world.gravity.y = 2.0;
@@ -582,8 +588,10 @@
             }
         });
 
-        // 바닥을 화면 하단 끝까지 채우는 거대한 박스로 변경
+        const bottomOffset = isMobile ? 200 : 150; 
         const groundHeight = bottomOffset + 100;
+        
+        // 바닥 생성
         ground = Bodies.rectangle(gameWidth / 2, gameHeight + (groundHeight / 2) - (bottomOffset - 25), gameWidth, groundHeight, { 
             isStatic: true, 
             label: 'ground', 
@@ -703,8 +711,8 @@
                 });
                 context.restore();
 
-                // [수정] 바닥은 표정(에모지)을 그리지 않음
-                if (body.label === 'ground') return;
+                // [수정] 바닥(ground)은 어떤 경우에도 표정을 그리지 않음
+                if (body.label === 'ground' || body === ground) return;
 
                 context.save();
                 context.translate(x, y); 
@@ -908,11 +916,32 @@
         isGameOver = true; 
         isPressing = false;
         
-        // 게임 오버 시에도 소원 빌기 페이지로 이동하여 결과를 마무리하도록 유도
         setTimeout(() => {
-            alert("돌탑이 무너졌습니다! 지금까지 쌓은 탑으로 소원을 빌어보세요.");
-            goToWish();
+            alert("돌탑이 무너졌습니다! 다시 도전해보세요.");
+            resetGame();
         }, 800);
+    }
+
+    function resetGame() {
+        // 1. 상태 변수 초기화
+        isGameOver = false;
+        isGameStarted = false;
+        stoneCount = 0;
+        document.getElementById('count').textContent = "1";
+        
+        // 2. 물리 엔진 월드 초기화
+        const allStones = [...stones];
+        stones = [];
+        allStones.forEach(s => Composite.remove(engine.world, s));
+        
+        // 3. UI 초기화
+        const overlay = document.getElementById('start-overlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.style.pointerEvents = 'auto';
+        }
+        
+        updateEnvironment(1);
     }
 </script>
 </body>
