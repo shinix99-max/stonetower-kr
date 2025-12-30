@@ -316,8 +316,8 @@
             
             // 바닥 데코는 스크린샷에서 제외하거나 최소화 (돌탑에 집중)
             
-            // 돌탑 구성원들
-            [ground, ...stones].forEach(body => {
+            // 돌탑 구성원들 (ground는 제외하여 불필요한 공백 제거)
+            stones.forEach(body => {
                 const { x, y } = body.position;
                 ctx.save();
                 ctx.fillStyle = (body.render.fillStyle === 'rainbow') ? '#ffcc00' : body.render.fillStyle;
@@ -568,18 +568,20 @@
     function initGroundDeco() {
         groundDeco = [];
         const colors = ['#2d3436', '#404040', '#4b4b4b', '#5d5d5d', '#353535'];
-        const numStones = 50; // 개수를 더 늘려 가득 채움
+        const numStones = 70; // 개수를 대폭 늘림
         const bOffset = (window.innerWidth <= 500 ? 120 : 100);
         for (let i = 0; i < numStones; i++) {
-            const w = 80 + Math.random() * 100; // 크기 더 다양하게
+            const w = 80 + Math.random() * 100;
             const h = w * (0.3 + Math.random() * 0.4);
-            const x = Math.random() * (gameWidth + 150) - 75; // 더 넓게 채움
-            // 기반석 아래 공간을 돌 무더기로 가득 채우도록 배치
-            const groundTopY = gameHeight - bOffset + 25;
-            const y = groundTopY + (Math.random() * (bOffset + 50)); 
+            const x = Math.random() * (gameWidth + 150) - 75;
+            
+            // 기반석 위치(gameHeight - bOffset)까지 돌무더기가 차오르도록 배치
+            const baseLevelY = gameHeight - bOffset;
+            const y = baseLevelY + 25 + (Math.random() * bOffset); // 기반석 아래부터 바닥까지 골고루
+            
             const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
             const vertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
-            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 2.0, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
+            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 2.5, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
         }
         // Y좌표 기준으로 정렬하여 뒤쪽 돌이 먼저 그려지게 함
         groundDeco.sort((a, b) => a.y - b.y);
