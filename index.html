@@ -6,6 +6,7 @@
     <title>마음 쌓기 - 디지털 돌탑</title>
     <script src="https://cdn.jsdelivr.net/npm/poly-decomp@0.3.0/dist/poly-decomp.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
         :root { --primary: #4a69bd; --bg: #0a0a0a; --text: #f0f2f5; }
@@ -75,6 +76,7 @@
     <section id="landing-page" class="page active">
         <h1 class="logo">마음 쌓기</h1>
         <p class="sub-logo">당신의 소원을 돌탑에 담아보세요.</p>
+        <p style="font-size: 14px; color: #aaa; margin-top: -28px; margin-bottom: 28px;">지금까지 <span id="total-towers">0</span>개의 돌탑이 쌓였어요</p>
         <div class="input-group">
             <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="10">
             <button class="start-btn" onclick="goToGame()">시작하기</button>
@@ -120,6 +122,13 @@
 <script>
     const { Engine, Render, Runner, Bodies, Composite, Body, Events, Bounds, Vertices, SAT, Query, Common } = Matter;
 
+    // Supabase 설정
+    const SUPABASE_URL = 'https://getubkgxtccbmxypwkui.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdldHVia2d4dGNjYm14eXB3a3VpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODMwNTcsImV4cCI6MjA4MjY1OTA1N30.GiGrkY1V27PluiWG6BL7dNLOK4U-XJruq0SDl1dV5Ho';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentSessionId = null; // 현재 판의 DB ID를 저장
+
     const BG_IMAGES = {
         level1: 'url("./low_background_3.png")', 
         level2: 'url("./middle_background_3.png")', 
@@ -160,11 +169,32 @@
         window.showPage('game-page');
     };
 
-    window.startGame = (e) => {
+    window.startGame = async (e) => {
         if (e) { e.stopPropagation(); e.preventDefault(); }
         if (isGameStarted) return;
         isGameStarted = true;
         document.getElementById('start-overlay').style.display = 'none';
+        
+        // [Supabase] 기반석 드롭(게임 시작) 횟수 집계 및 세션 시작
+        try {
+            const { data: trials } = await supabaseClient
+                .from('stone_towers')
+                .select('trial')
+                .eq('nickname', nickname)
+                .order('trial', { ascending: false })
+                .limit(1);
+            
+            const nextTrial = (trials && trials.length > 0) ? trials[0].trial + 1 : 1;
+            
+            const { data } = await supabaseClient
+                .from('stone_towers')
+                .insert([{ nickname, trial: nextTrial, floor: 1 }])
+                .select();
+            
+            if (data && data.length > 0) currentSessionId = data[0].id;
+            loadGlobalStats();
+        } catch (err) {}
+
         Body.setStatic(baseStone, false);
         prepareNextStone();
     };
@@ -326,15 +356,73 @@
             stones.push(baseStone);
             Composite.add(engine.world, baseStone);
             
+            // [Supabase] 기반석 드롭(재시작) 시 트라이 추가
+            try {
+                supabaseClient
+                    .from('stone_towers')
+                    .select('trial')
+                    .eq('nickname', nickname)
+                    .order('trial', { ascending: false })
+                    .limit(1)
+                    .then(({ data: trials }) => {
+                        const nextTrial = (trials && trials.length > 0) ? trials[0].trial + 1 : 1;
+                        return supabaseClient
+                            .from('stone_towers')
+                            .insert([{ nickname, trial: nextTrial, floor: 1 }])
+                            .select();
+                    })
+                    .then(({ data }) => {
+                        if (data && data.length > 0) currentSessionId = data[0].id;
+                        loadGlobalStats();
+                    });
+            } catch (err) {}
+            
             // 4. 다음 돌 준비
             prepareNextStone();
         }, 800); 
     }
 
-    function renderLeaderboard() {
-        const d = [{ name: "평온한구름", floor: 25 }, { name: "깊은산속", floor: 22 }, { name: "조용한강물", floor: 18 }, { name: nickname, floor: stoneCount + 1 }].sort((a, b) => b.floor - a.floor);
-        const r = d.findIndex(i => i.name === nickname) + 1;
-        document.getElementById('leaderboard-list').innerHTML = d.slice(0, 3).map((i, idx) => `<div class="rank-item" style="${i.name === nickname ? 'background: rgba(74, 105, 189, 0.2); border-radius: 10px; padding: 10px;' : ''}"><span>${idx + 1}위 / ${i.name}</span><span>${i.floor}층</span></div>`).join('') + (r > 3 ? `<div style="padding: 10px 0; color: #444; font-size: 12px;">•••••</div><div class="rank-item" style="background: rgba(74, 105, 189, 0.2); border-radius: 10px; padding: 10px;"><span>${r}위 / ${nickname}</span><span>${stoneCount + 1}층</span></div>` : '');
+    async function renderLeaderboard() {
+        const listEl = document.getElementById('leaderboard-list');
+        if (!listEl) return;
+        const wishText = document.getElementById('wish-text').value.trim();
+        
+        // 1) 내 점수와 소원 업데이트
+        if (currentSessionId) {
+            try {
+                await supabaseClient
+                    .from('stone_towers')
+                    .update({ floor: stoneCount + 1, wish: wishText })
+                    .eq('id', currentSessionId);
+            } catch (err) {}
+        }
+
+        // 2) Top3 조회 (가장 높은 층수 기준)
+        try {
+            const { data: topData } = await supabaseClient
+                .from('stone_towers')
+                .select('nickname, floor')
+                .order('floor', { ascending: false })
+                .limit(3);
+
+            if (topData) {
+                listEl.innerHTML = topData.map((item, idx) => {
+                    return `<div class="rank-item"><span>${idx + 1}위 / ${item.nickname}</span><span>${item.floor}층</span></div>`;
+                }).join('');
+            }
+        } catch (err) {}
+    }
+
+    async function loadGlobalStats() {
+        try {
+            const { count, error } = await supabaseClient
+                .from('stone_towers')
+                .select('*', { count: 'exact', head: true });
+            if (!error) {
+                const el = document.getElementById('total-towers');
+                if (el) el.textContent = String(count);
+            }
+        } catch (e) {}
     }
 
     function resetScreenHeight() { document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
@@ -400,6 +488,8 @@
     window.onload = () => {
         if (window.decomp) Common.setDecomp(window.decomp);
         resetScreenHeight(); initPhysics(); updateEnvironment(1);
+        // [Supabase] 전체 돌탑 누적 횟수 로드
+        loadGlobalStats();
         window.addEventListener('resize', resetScreenHeight);
         window.addEventListener('mousedown', handleStart);
         window.addEventListener('touchstart', (e) => {
