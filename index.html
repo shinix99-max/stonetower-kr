@@ -142,10 +142,10 @@
         </div>
         <div id="start-overlay" onclick="startGame(event)">
             <div class="start-text">터치하여 시작</div>
-            <p style="font-size: 14px; color: #aaa; margin-top: 20px;">* 소원 빌기를 누르면 다시 쌓을 수 없습니다.</p>
+            <p style="font-size: 16px; color: #fff; margin-top: 20px; font-weight: bold;">원하는 위치로 끌어서 놓으세요.</p>
+            <p style="font-size: 14px; color: #aaa; margin-top: 10px;">* 소원 빌기를 누르면 다시 쌓을 수 없습니다.</p>
         </div>
         <div id="canvas-container"></div>
-        <div class="guide-text">원하는 위치로 끌어서 놓으세요.</div>
     </section>
 
     <section id="wish-page" class="page">
@@ -277,12 +277,14 @@
         const finalImg = document.getElementById('final-screenshot');
         if (!finalImg || stones.length === 0) return;
 
-        // 1. 전체 돌탑의 범위 계산 (최상단 돌부터 바닥까지)
-        let minTopY = ground.position.y;
+        // 1. 전체 돌탑의 범위 계산 (최상단 돌부터 기반석 바닥까지)
+        const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
+        const towerBottomY = gameHeight - currentBOffset + 25; // 기반석 아랫면
+        
+        let minTopY = towerBottomY;
         stones.forEach(s => { if (s.bounds.min.y < minTopY) minTopY = s.bounds.min.y; });
         
-        const towerBottomY = ground.position.y + 50; 
-        const totalTowerHeight = towerBottomY - minTopY + 100; // 여백 포함
+        const totalTowerHeight = towerBottomY - minTopY + 40; // 상단 여백 최소화
         const captureWidth = gameWidth;
         
         const tempCanvas = document.createElement('canvas');
@@ -294,7 +296,7 @@
         const renderTower = (bg) => {
             ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             
-            // 배경 그리기 (반복/확대해서 채움)
+            // 배경 그리기
             if (bg) {
                 ctx.save(); ctx.globalAlpha = 0.25;
                 const scale = Math.max(tempCanvas.width / bg.width, tempCanvas.height / bg.height);
@@ -302,19 +304,12 @@
                 ctx.restore();
             }
 
-            // 모든 돌 그리기 (Y좌표 보정: minTopY가 0에 가깝게)
-            const offsetY = -minTopY + 50;
+            // 모든 돌 그리기 (Y좌표 보정: towerBottomY가 tempCanvas.height에 닿도록)
+            const offsetY = tempCanvas.height - towerBottomY;
             ctx.save(); ctx.translate(0, offsetY);
             
-            // 바닥 데코 먼저
-            groundDeco.forEach(deco => {
-                ctx.save(); ctx.translate(deco.x, deco.y); ctx.rotate(deco.angle);
-                ctx.fillStyle = deco.color;
-                ctx.beginPath(); deco.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
-                ctx.save(); ctx.clip(); drawStonePattern(ctx, deco.pattern, deco.seed, deco.w, deco.h); ctx.restore();
-                ctx.restore();
-            });
-
+            // 바닥 데코는 스크린샷에서 제외하거나 최소화 (돌탑에 집중)
+            
             // 돌탑 구성원들
             [ground, ...stones].forEach(body => {
                 const { x, y } = body.position;
@@ -566,19 +561,19 @@
     let groundDeco = [];
     function initGroundDeco() {
         groundDeco = [];
-        const colors = ['#404040', '#707070', '#b0b0b0', '#505050', '#2d3436', '#636e72'];
-        const numStones = 25; // 개수 늘림
+        const colors = ['#2d3436', '#404040', '#4b4b4b', '#5d5d5d', '#353535'];
+        const numStones = 35; // 개수 더 늘림
         const bOffset = (window.innerWidth <= 500 ? 120 : 100);
         for (let i = 0; i < numStones; i++) {
-            const w = 70 + Math.random() * 60; // 크기 약간 키움
-            const h = w * (0.4 + Math.random() * 0.2);
-            const x = Math.random() * gameWidth;
-            // 바닥 영역 상단에 겹겹이 쌓인 느낌으로 배치 (Y 좌표 조정)
-            const groundTopY = gameHeight - 1.5 * bOffset + 25;
-            const y = groundTopY + (Math.random() * 60 - 40); 
+            const w = 80 + Math.random() * 80; // 크기 더 다양하게
+            const h = w * (0.3 + Math.random() * 0.3);
+            const x = Math.random() * (gameWidth + 100) - 50; // 좌우 여백까지 채움
+            // 기반석 아래 회색 공간(bOffset 영역)을 채우도록 배치
+            const groundTopY = gameHeight - bOffset + 25;
+            const y = groundTopY + (Math.random() * bOffset); 
             const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
             const vertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
-            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 0.5, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
+            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 1.0, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
         }
         // Y좌표 기준으로 정렬하여 뒤쪽 돌이 먼저 그려지게 함
         groundDeco.sort((a, b) => a.y - b.y);
