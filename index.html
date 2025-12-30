@@ -274,9 +274,11 @@
     let isGameStarted = false;
     let stones = [];
     let isPressing = false;
-    let isValidLocation = true; 
-    let initialTouchX = 0; // [추가] 터치 시작 위치 저장을 위한 변수
-    let initialStoneX = 0; // [추가] 터치 시작 시 돌의 위치 저장을 위한 변수
+    let isValidLocation = true;    
+    let initialTouchX = 0; 
+    let initialTouchY = 0; // [추가] 터치 시작 Y 위치
+    let initialStoneX = 0; 
+    let initialStoneY = 0; // [추가] 터치 시작 시 돌의 Y 위치
     
     // [중요] 카메라 좌표 제어 변수
     let cameraY = 0;        // 현재 카메라 높이
@@ -505,8 +507,8 @@
         const targetY = gameHeight - 80; // 바닥에서 조금 더 위로 (기존 50 -> 80)
         
         baseStone = Bodies.rectangle(gameWidth / 2, -50, baseWidth, baseHeight, { 
-            friction: 2.0, 
-            frictionStatic: 100.0, 
+            friction: 10.0, // 마찰력 극대화 (기존 2.0)
+            frictionStatic: 1000.0, // 정적 마찰력 극대화 (기존 100.0)
             density: 200, 
             chamfer: { radius: 25 }, 
             label: 'baseStone',
@@ -552,8 +554,8 @@
         const scaledVertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
         
         nextStoneData = { w: w, h: h, vertices: scaledVertices };
-        // 돌 생성 위치는 현재 카메라 위치를 고려해서 화면 상단으로 설정
-        currentInputPos = { x: gameWidth / 2, y: 200 + targetCameraY }; 
+        // [수정] 돌 생성 위치를 조금 더 낮춤 (200 -> 250)
+        currentInputPos = { x: gameWidth / 2, y: 250 + targetCameraY }; 
     }
 
     function initPhysics() {
@@ -749,17 +751,24 @@
         if (!isPressing) return;
         const rect = document.getElementById('game-page').getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         
         // [수정] 간접 조작: 터치 시작점으로부터의 이동 거리만큼 돌을 이동시킴 (1:1 매핑)
         const deltaX = clientX - initialTouchX;
+        const deltaY = clientY - initialTouchY; // 상하 이동 거리 계산
+        
         currentInputPos.x = initialStoneX + deltaX;
+        currentInputPos.y = initialStoneY + deltaY; // 상하 위치 업데이트
 
-        // 화면 경계 제한
+        // 화면 경계 제한 (좌우)
         if (currentInputPos.x < 50) currentInputPos.x = 50;
         if (currentInputPos.x > gameWidth - 50) currentInputPos.x = gameWidth - 50;
         
-        // Y축은 고정 (준비된 위치)
-        currentInputPos.y = 200 + targetCameraY;
+        // 화면 경계 제한 (상하 - 너무 위나 아래로 가지 않게)
+        const minY = targetCameraY + 50;
+        const maxY = gameHeight - 250; // 바닥 회색 영역 침범 방지
+        if (currentInputPos.y < minY) currentInputPos.y = minY;
+        if (currentInputPos.y > maxY) currentInputPos.y = maxY;
 
         // [추가] 돌이 겹치는지 체크
         checkValidity();
@@ -813,9 +822,11 @@
         const activeStones = stones.filter(s => !s.isStatic);
         if (activeStones.length === 0) {
             isPressing = true;
-            // [수정] 터치 시작 시의 위치 저장 (간접 조작용)
+            // [수정] 터치 시작 시의 위치 저장 (상하좌우 간접 조작용)
             initialTouchX = clientX;
+            initialTouchY = clientY;
             initialStoneX = currentInputPos.x;
+            initialStoneY = currentInputPos.y;
             handleMove(e);
         }
     };
@@ -868,8 +879,8 @@
         
         // 2. 오목한 도형을 위한 Body 생성
         const stone = Bodies.fromVertices(currentInputPos.x, currentInputPos.y, [vertices], {
-            friction: 2.0, // 마찰력 대폭 강화
-            frictionStatic: 100.0, // 정적 마찰력 대폭 강화
+            friction: 10.0, // 마찰력 대폭 강화 (기존 2.0)
+            frictionStatic: 1000.0, // 정적 마찰력 대폭 강화 (기존 100.0)
             restitution: 0, 
             density: 50, // 무게감 증가하여 더 끈끈하게 안착
             label: 'stone',
