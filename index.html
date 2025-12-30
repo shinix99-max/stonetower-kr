@@ -233,7 +233,9 @@
         engine = Engine.create({ constraintIterations: 50, positionIterations: 50, velocityIterations: 50 });
         engine.world.gravity.y = 1.2;
         render = Render.create({ element: container, engine, options: { width: gameWidth, height: gameHeight, wireframes: false, background: 'transparent', hasBounds: true } });
-        const bOffset = isMobile ? 200 : 150;
+        
+        // [수정] 바닥 회색 영역 높이를 다시 줄임 (200/150 -> 120/100)
+        const bOffset = isMobile ? 120 : 100;
         ground = Bodies.rectangle(gameWidth / 2, gameHeight + 50 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: '#333' } });
         baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { friction: 10, frictionStatic: 1000, density: 200, chamfer: { radius: 25 }, label: 'baseStone', isStatic: true, emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, render: { fillStyle: '#dcdcdc' } });
         stones.push(baseStone); Composite.add(engine.world, [ground, baseStone]);
@@ -251,7 +253,10 @@
             }
             [ground, ...stones].forEach(body => {
                 const { x, y } = body.position;
-                if (body.label === 'baseStone' && !body.isStatic && y >= gameHeight - ((window.innerWidth <= 500) ? 200 : 150)) { Body.setStatic(body, true); Body.setPosition(body, { x: gameWidth / 2, y: gameHeight - ((window.innerWidth <= 500) ? 200 : 150) }); }
+                // [수정] 기반석 멈춤 위치도 bOffset에 맞춰 수정
+                const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
+                const stopY = gameHeight - currentBOffset;
+                if (body.label === 'baseStone' && !body.isStatic && y >= stopY) { Body.setStatic(body, true); Body.setPosition(body, { x: gameWidth / 2, y: stopY }); }
                 if (!body.isStatic) { if (body.speed < 0.3 && body.angularSpeed < 0.05) { if (!body.stableStartTime) body.stableStartTime = now; else if (now - body.stableStartTime > 600) Body.setStatic(body, true); } else body.stableStartTime = null; }
                 ctx.save();
                 if (body.render.fillStyle === 'rainbow') { const h = (now / 30) % 360; ctx.fillStyle = `hsl(${h}, 80%, 70%)`; ctx.shadowColor = `hsl(${h}, 80%, 70%)`; ctx.shadowBlur = 15; }
@@ -287,7 +292,41 @@
         if (!s) return; stones.push(s); Composite.add(engine.world, s); stoneCount++; document.getElementById('count').textContent = stoneCount + 1; updateEnvironment(stoneCount + 1); prepareNextStone();
     }
 
-    function gameOver() { if (isGameOver) return; isGameOver = true; setTimeout(() => { alert("돌탑이 무너졌습니다! 다시 도전해보세요."); location.reload(); }, 800); }
+    function gameOver() { 
+        if (isGameOver) return; 
+        isGameOver = true; 
+        isPressing = false; 
+        setTimeout(() => { 
+            alert("돌탑이 무너졌습니다! 다시 도전해보세요."); 
+            
+            // 1. 기존 쌓인 돌들 제거
+            stones.forEach(s => Composite.remove(engine.world, s));
+            stones = [];
+            
+            // 2. 게임 상태 초기화 (닉네임은 유지)
+            stoneCount = 0;
+            isGameOver = false;
+            document.getElementById('count').textContent = "1";
+            updateEnvironment(1);
+            
+            // 3. 기반석 새로 생성하여 즉시 낙하
+            baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { 
+                friction: 10, 
+                frictionStatic: 1000, 
+                density: 200, 
+                chamfer: { radius: 25 }, 
+                label: 'baseStone', 
+                isStatic: false, 
+                emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, 
+                render: { fillStyle: '#dcdcdc' } 
+            });
+            stones.push(baseStone);
+            Composite.add(engine.world, baseStone);
+            
+            // 4. 다음 돌 준비
+            prepareNextStone();
+        }, 800); 
+    }
 
     function renderLeaderboard() {
         const d = [{ name: "평온한구름", floor: 25 }, { name: "깊은산속", floor: 22 }, { name: "조용한강물", floor: 18 }, { name: nickname, floor: stoneCount + 1 }].sort((a, b) => b.floor - a.floor);
