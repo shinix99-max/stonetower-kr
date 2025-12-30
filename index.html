@@ -349,52 +349,68 @@
     }
 
     async function goToWish() {
-        // [추가] 돌들이 모두 멈춘(Static) 상태인지 확인
-        const activeStones = stones.filter(s => !s.isStatic);
-        if (activeStones.length > 0) {
-            // 미세한 움직임은 허용하기 위해 속도 합계 체크
-            const totalSpeed = activeStones.reduce((acc, s) => acc + s.speed, 0);
-            if (totalSpeed > 0.5) {
-                alert("돌들이 아직 움직이고 있습니다. 잠시만 기다려주세요!");
-                return;
-            }
+        const wishBtn = document.getElementById('wish-btn');
+        if (wishBtn) {
+            wishBtn.disabled = true;
+            wishBtn.style.opacity = '0.5';
         }
 
-        // 1. 달 애니메이션 시작
+        // 1. 달 애니메이션 즉시 실행
         const moonOverlay = document.getElementById('moon-overlay');
-        const moonIcon = moonOverlay.querySelector('.moon-icon');
+        const moonIcon = moonOverlay ? moonOverlay.querySelector('.moon-icon') : null;
         
-        moonOverlay.style.display = 'flex';
-        setTimeout(() => {
+        if (moonOverlay && moonIcon) {
+            moonOverlay.style.display = 'flex';
             moonIcon.classList.add('rising');
-        }, 50);
-
-        // 애니메이션 감상을 위해 2.8초 대기
-        await new Promise(resolve => setTimeout(resolve, 2800));
-
-        const matterCanvas = document.querySelector('#canvas-container canvas');
-        const bgLayer = document.getElementById('bg-layer');
-        const finalImg = document.getElementById('final-screenshot');
-
-        if (!matterCanvas || !bgLayer || !finalImg) {
-            showPage('wish-page');
-            return;
         }
 
-        // 1. 임시 캔버스 생성 (합치기용)
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = matterCanvas.width;
-        tempCanvas.height = matterCanvas.height;
-        const ctx = tempCanvas.getContext('2d');
+        // 2. 스크린샷 캡처 (비동기로 진행)
+        const captureAndGo = async () => {
+            try {
+                const matterCanvas = document.querySelector('#canvas-container canvas');
+                const bgLayer = document.getElementById('bg-layer');
+                const finalImg = document.getElementById('final-screenshot');
 
-        // 2. 현재 배경 이미지 URL 추출
-        const bgStyle = bgLayer.style.backgroundImage;
-        const bgUrl = bgStyle.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
-        
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.onload = () => {
-            // 배경 그리기 (화면에 꽉 차게)
+                if (matterCanvas && bgLayer && finalImg) {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = matterCanvas.width;
+                    tempCanvas.height = matterCanvas.height;
+                    const ctx = tempCanvas.getContext('2d');
+
+                    const bgStyle = bgLayer.style.backgroundImage || "";
+                    const bgMatch = bgStyle.match(/url\(['"]?(.*?)['"]?\)/);
+                    const bgUrl = bgMatch ? bgMatch[1] : "";
+                    
+                    if (bgUrl) {
+                        const bgImg = new Image();
+                        bgImg.crossOrigin = "anonymous";
+                        bgImg.onload = () => {
+                            renderFinalCapture(ctx, bgImg, tempCanvas, matterCanvas, finalImg);
+                        };
+                        bgImg.onerror = () => {
+                            renderFinalCapture(ctx, null, tempCanvas, matterCanvas, finalImg);
+                        };
+                        bgImg.src = bgUrl;
+                    } else {
+                        renderFinalCapture(ctx, null, tempCanvas, matterCanvas, finalImg);
+                    }
+                }
+            } catch (e) {
+                console.error("Capture failed", e);
+            }
+
+            // 3. 애니메이션 충분히 보여준 후 페이지 이동
+            setTimeout(() => {
+                completeGoToWish();
+            }, 2500);
+        };
+
+        captureAndGo();
+    }
+
+    function renderFinalCapture(ctx, bgImg, tempCanvas, matterCanvas, finalImg) {
+        ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        if (bgImg) {
             const canvasRatio = tempCanvas.width / tempCanvas.height;
             const imgRatio = bgImg.width / bgImg.height;
             let drawWidth, drawHeight, offsetX, offsetY;
@@ -410,51 +426,27 @@
                 offsetX = (tempCanvas.width - drawWidth) / 2;
                 offsetY = 0;
             }
-
             ctx.save();
-            ctx.globalAlpha = 0.35; // 배경을 실제 화면처럼 어둡게 처리
+            ctx.globalAlpha = 0.35;
             ctx.drawImage(bgImg, offsetX, offsetY, drawWidth, drawHeight);
             ctx.restore();
-            
-            // 3. 돌탑 캔버스 위에 덮어쓰기 (기반석 하단이 이미지 하단에 오도록 그리기)
-            const isMobile = window.innerWidth <= 500;
-            const baseBottomOffset = isMobile ? 200 : 150;
-            
-            // 기반석의 중심이 stopY(gameHeight - baseBottomOffset)에 있고,
-            // 기반석의 높이가 50px이므로, 기반석의 하단 실제 좌표는 gameHeight - baseBottomOffset + 25 입니다.
-            const baseStoneBottomY = gameHeight - baseBottomOffset + 25;
-            
-            // 캔버스에서 (0, 0)부터 baseStoneBottomY까지의 영역을 캡처하여
-            // 결과 이미지의 하단에 맞춰서 그립니다.
-            const sourceHeight = baseStoneBottomY;
-            const destHeight = tempCanvas.height;
-            const scale = destHeight / sourceHeight;
-            const destWidth = gameWidth * scale;
-            const destX = (tempCanvas.width - destWidth) / 2;
-
-            ctx.drawImage(
-                matterCanvas, 
-                0, 0, gameWidth, sourceHeight, // 소스 영역: 화면 상단부터 기반석 하단까지
-                destX, 0, destWidth, destHeight // 대상 영역: 결과 박스에 꽉 차게 (높이 기준)
-            );
-
-            // 4. 최종 이미지 결과물 생성
-            finalImg.src = tempCanvas.toDataURL('image/png');
-            
-            // 렌더링 정지 및 페이지 이동
-            completeGoToWish();
-        };
-        
-        bgImg.onerror = () => {
-            // 배경 로드 실패 시 검은 배경에 돌탑만이라도 캡처
+        } else {
             ctx.fillStyle = "#0a0a0a";
             ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            ctx.drawImage(matterCanvas, 0, 0);
-            finalImg.src = tempCanvas.toDataURL('image/png');
-            completeGoToWish();
-        };
+        }
         
-        bgImg.src = bgUrl;
+        const isMobile = window.innerWidth <= 500;
+        const baseBottomOffset = isMobile ? 200 : 150;
+        const baseStoneBottomY = gameHeight - baseBottomOffset + 25;
+        
+        const sourceHeight = baseStoneBottomY;
+        const destHeight = tempCanvas.height;
+        const scale = destHeight / sourceHeight;
+        const destWidth = gameWidth * scale;
+        const destX = (tempCanvas.width - destWidth) / 2;
+
+        ctx.drawImage(matterCanvas, 0, 0, gameWidth, sourceHeight, destX, 0, destWidth, destHeight);
+        finalImg.src = tempCanvas.toDataURL('image/png');
     }
 
     function completeGoToWish() {
