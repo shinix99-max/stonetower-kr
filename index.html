@@ -274,7 +274,9 @@
     let isGameStarted = false;
     let stones = [];
     let isPressing = false;
-    let isValidLocation = true; // [추가] 현재 위치가 돌을 놓을 수 있는 곳인지 확인
+    let isValidLocation = true; 
+    let initialTouchX = 0; // [추가] 터치 시작 위치 저장을 위한 변수
+    let initialStoneX = 0; // [추가] 터치 시작 시 돌의 위치 저장을 위한 변수
     
     // [중요] 카메라 좌표 제어 변수
     let cameraY = 0;        // 현재 카메라 높이
@@ -637,6 +639,11 @@
                 context.fillStyle = '#333';
                 context.font = 'bold 20px Arial'; context.textAlign = 'center';
                 context.fillText('●◡●', 0, 5); 
+
+                // [추가] 손가락 위치에 따른 가이드를 위한 손 모양 에모지 (돌 아래쪽에 표시)
+                context.globalAlpha = 1.0;
+                context.font = '30px Arial';
+                context.fillText('🤏', 0, 45); 
                 context.restore();
             }
 
@@ -646,15 +653,15 @@
                 if (!body) return;
                 const { x, y } = body.position;
                 
-            // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
-            const isMobile = window.innerWidth <= 500;
-            const stopOffset = isMobile ? 200 : 150; 
-            const stopY = gameHeight - stopOffset; 
-            
-            if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
-                Body.setStatic(body, true);
-                Body.setPosition(body, { x: gameWidth / 2, y: stopY });
-            }
+                // 기반암이 바닥 근처에 오면 완벽하게 고정 (Static)
+                const isMobile = window.innerWidth <= 500;
+                const stopOffset = isMobile ? 200 : 150; 
+                const stopY = gameHeight - stopOffset; 
+                
+                if (body.label === 'baseStone' && !body.isStatic && y >= stopY) {
+                    Body.setStatic(body, true);
+                    Body.setPosition(body, { x: gameWidth / 2, y: stopY });
+                }
 
                 if (!body.isStatic) {
                     const isStable = body.speed < 0.3 && body.angularSpeed < 0.05;
@@ -694,17 +701,14 @@
                 });
                 context.restore();
 
+                // [수정] 바닥은 표정(에모지)을 그리지 않음
+                if (body.label === 'ground') return;
+
                 context.save();
                 context.translate(x, y); 
                 context.rotate(body.angle);
                 
-                // 돌의 표정 그리기 (기반석과 일반 돌에만 그리기)
-                if (body.label === 'ground') {
-                    context.restore();
-                    return;
-                }
-
-                // 어두운 돌 위에서도 잘 보이도록 표정 색상 조정
+                // 돌의 표정 그리기
                 const fillStyle = body.render.fillStyle;
                 if (fillStyle === 'rainbow') {
                     context.fillStyle = '#fff'; // 영롱한 돌은 흰색 표정
@@ -745,11 +749,17 @@
         if (!isPressing) return;
         const rect = document.getElementById('game-page').getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         
-        // 화면 터치 위치 + 현재 카메라의 Y위치 = 실제 게임 내 위치
-        currentInputPos.x = clientX - rect.left;
-        currentInputPos.y = (clientY - rect.top) + cameraY;
+        // [수정] 간접 조작: 터치 시작점으로부터의 이동 거리만큼 돌을 이동시킴 (1:1 매핑)
+        const deltaX = clientX - initialTouchX;
+        currentInputPos.x = initialStoneX + deltaX;
+
+        // 화면 경계 제한
+        if (currentInputPos.x < 50) currentInputPos.x = 50;
+        if (currentInputPos.x > gameWidth - 50) currentInputPos.x = gameWidth - 50;
+        
+        // Y축은 고정 (준비된 위치)
+        currentInputPos.y = 200 + targetCameraY;
 
         // [추가] 돌이 겹치는지 체크
         checkValidity();
@@ -787,9 +797,25 @@
         // 게임 시작 전의 잔여 터치/클릭 방지
         if (e.target.id === 'start-overlay') return;
         
+        const rect = document.getElementById('game-page').getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        // [추가] 소원 빌기 버튼 영역 보호: 버튼 근처 터치 시 돌 생성 방지
+        const wishBtn = document.getElementById('wish-btn');
+        const wishRect = wishBtn.getBoundingClientRect();
+        // 버튼 주변 20px 여유 공간 포함 체크
+        if (clientX > wishRect.left - 20 && clientX < wishRect.right + 20 &&
+            clientY > wishRect.top - 20 && clientY < wishRect.bottom + 20) {
+            return;
+        }
+        
         const activeStones = stones.filter(s => !s.isStatic);
         if (activeStones.length === 0) {
             isPressing = true;
+            // [수정] 터치 시작 시의 위치 저장 (간접 조작용)
+            initialTouchX = clientX;
+            initialStoneX = currentInputPos.x;
             handleMove(e);
         }
     };
