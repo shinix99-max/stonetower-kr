@@ -84,7 +84,7 @@
 
         #result-page { background: #0a0a0a; overflow-y: auto; justify-content: flex-start; padding-top: 40px; padding-bottom: 60px; }
         #result-page.active { display: block; }
-        .screenshot-container { width: 95%; height: auto; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; }
+        .screenshot-container { width: 95%; height: 600px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; }
         #final-screenshot { width: 100%; height: auto; display: block; }
         .cheer-msg { font-size: 20px; font-weight: 700; margin-bottom: 30px; color: #ddd; }
         
@@ -146,7 +146,7 @@
         </div>
         <div id="start-overlay" onclick="startGame(event)">
             <div class="start-text">터치하여 시작</div>
-            <p style="font-size: 16px; color: #fff; margin-top: 20px; font-weight: bold;">원하는 위치로 끌어서 놓으세요.</p>
+            <p style="font-size: 16px; color: #fff; margin-top: 20px; font-weight: bold;">원하는 위치로 끌어서 '사뿐히' 놓으세요.</p>
             <p style="font-size: 14px; color: #aaa; margin-top: 10px;">* 소원 빌기를 누르면 다시 쌓을 수 없습니다.</p>
         </div>
         <div id="canvas-container"></div>
@@ -288,7 +288,9 @@
         let minTopY = towerBottomY;
         stones.forEach(s => { if (s.bounds.min.y < minTopY) minTopY = s.bounds.min.y; });
         
-        const totalTowerHeight = towerBottomY - minTopY + 40; // 상단 여백 최소화
+        // 스크린샷 캔버스 높이를 기반석 아랫면부터 꼭대기까지로 설정
+        const towerActualHeight = towerBottomY - minTopY;
+        const totalTowerHeight = towerActualHeight + 60; // 상단 여백 약간 추가
         const captureWidth = gameWidth;
         
         const tempCanvas = document.createElement('canvas');
@@ -308,7 +310,7 @@
                 ctx.restore();
             }
 
-            // 모든 돌 그리기 (Y좌표 보정: towerBottomY가 tempCanvas.height에 닿도록)
+            // 모든 돌 그리기 (기반석 아랫면이 캔버스 하단에 딱 맞도록 오프셋 계산)
             const offsetY = tempCanvas.height - towerBottomY;
             ctx.save(); ctx.translate(0, offsetY);
             
@@ -354,9 +356,9 @@
         engine.world.gravity.y = 1.2;
         render = Render.create({ element: container, engine, options: { width: gameWidth, height: gameHeight, wireframes: false, background: 'transparent', hasBounds: true } });
         
-        // [수정] 바닥 회색 영역 높이를 다시 줄임 (200/150 -> 120/100)
         const bOffset = isMobile ? 120 : 100;
-        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 50 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: '#333' } });
+        // 하단 회색 박스 제거: fillStyle을 투명하게 하거나 배경색과 동일하게 처리
+        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 50 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: 'transparent' } });
         baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { friction: 10, frictionStatic: 1000, density: 200, chamfer: { radius: 25 }, label: 'baseStone', isStatic: true, emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, render: { fillStyle: '#dcdcdc' } });
         stones.push(baseStone); Composite.add(engine.world, [ground, baseStone]);
         
@@ -566,18 +568,18 @@
     function initGroundDeco() {
         groundDeco = [];
         const colors = ['#2d3436', '#404040', '#4b4b4b', '#5d5d5d', '#353535'];
-        const numStones = 35; // 개수 더 늘림
+        const numStones = 50; // 개수를 더 늘려 가득 채움
         const bOffset = (window.innerWidth <= 500 ? 120 : 100);
         for (let i = 0; i < numStones; i++) {
-            const w = 80 + Math.random() * 80; // 크기 더 다양하게
-            const h = w * (0.3 + Math.random() * 0.3);
-            const x = Math.random() * (gameWidth + 100) - 50; // 좌우 여백까지 채움
-            // 기반석 아래 회색 공간(bOffset 영역)을 채우도록 배치
+            const w = 80 + Math.random() * 100; // 크기 더 다양하게
+            const h = w * (0.3 + Math.random() * 0.4);
+            const x = Math.random() * (gameWidth + 150) - 75; // 더 넓게 채움
+            // 기반석 아래 공간을 돌 무더기로 가득 채우도록 배치
             const groundTopY = gameHeight - bOffset + 25;
-            const y = groundTopY + (Math.random() * bOffset); 
+            const y = groundTopY + (Math.random() * (bOffset + 50)); 
             const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
             const vertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
-            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 1.0, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
+            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 2.0, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
         }
         // Y좌표 기준으로 정렬하여 뒤쪽 돌이 먼저 그려지게 함
         groundDeco.sort((a, b) => a.y - b.y);
@@ -599,8 +601,12 @@
             pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(),
             emojiPair: { stable: sl[Math.floor(Math.random() * sl.length)], unstable: ["⊙ｏ⊙", "⊙﹏⊙"][Math.floor(Math.random() * 2)] }
         };
-        // 5층 이후(stoneCount >= 4)의 생성 위치를 150에서 250으로 더 낮춤
-        currentInputPos = { x: gameWidth / 2, y: (stoneCount < 4 ? 320 : 250) + targetCameraY };
+        // 열번째 돌(stoneCount >= 9)부터는 생성 위치를 더 높게(150) 조정
+        let spawnY = 320;
+        if (stoneCount >= 4 && stoneCount < 9) spawnY = 250;
+        else if (stoneCount >= 9) spawnY = 150;
+        
+        currentInputPos = { x: gameWidth / 2, y: spawnY + targetCameraY };
     }
     function drawStonePattern(ctx, type, seed, w, h) {
         ctx.save();
