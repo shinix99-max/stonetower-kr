@@ -28,6 +28,24 @@
         .page.active { display: flex; }
 
         #landing-page { background: linear-gradient(to bottom, #1a1a1a, #0a0a0a); z-index: 60; }
+        .landing-illustration {
+            position: relative; width: 150px; height: 160px; margin-bottom: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+        }
+        .landing-moon {
+            position: absolute; top: 0; width: 60px; height: 60px;
+            background: #fdfd96; border-radius: 50%;
+            box-shadow: 0 0 30px rgba(253, 253, 150, 0.6);
+            z-index: 1;
+        }
+        .landing-stone {
+            width: 100px; height: 40px; border-radius: 50% 50% 40% 40%;
+            margin-bottom: -15px; z-index: 2; position: relative;
+        }
+        .stone-dark { background: #404040; width: 110px; height: 45px; }
+        .stone-white { background: #f5f5f5; width: 90px; height: 38px; }
+        .stone-gray { background: #707070; width: 100px; height: 42px; }
+
         .logo { font-size: 42px; font-weight: 900; margin-bottom: 10px; color: #f5f5f5; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
         .sub-logo { font-size: 16px; color: #ccc; margin-bottom: 40px; }
         .input-group { width: 80%; display: flex; flex-direction: column; gap: 15px; }
@@ -39,9 +57,17 @@
         
         #wish-btn { 
             position: absolute; top: 30px; right: 30px; 
-            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
-            color: white; padding: 10px 20px; border-radius: 25px; 
-            font-weight: bold; cursor: pointer; z-index: 30; backdrop-filter: blur(5px);
+            background: linear-gradient(135deg, #ffd700, #b8860b);
+            border: 2px solid #fff;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            color: white; padding: 10px 22px; border-radius: 25px; 
+            font-weight: 800; cursor: pointer; z-index: 30; backdrop-filter: blur(5px);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            animation: glow 2s infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(255,255,255,0.2); }
+            to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 10px rgba(255,255,255,0.4); }
         }
 
         #info { position: absolute; top: 30px; left: 30px; pointer-events: none; z-index: 20; text-align: left; }
@@ -53,11 +79,16 @@
         .submit-wish-btn { background: var(--primary); color: white; padding: 18px 40px; border-radius: 15px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; width: 90%; }
 
         #result-page { background: #0a0a0a; overflow-y: auto; justify-content: flex-start; padding-top: 40px; padding-bottom: 40px; }
-        .screenshot-container { width: 90%; height: 40vh; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid #333; background: #1a1a1a; }
-        #final-screenshot { width: 100%; height: 100%; object-fit: cover; object-position: bottom; display: block; }
+        .screenshot-container { width: 90%; max-height: 50vh; border-radius: 20px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid #333; background: #1a1a1a; }
+        #final-screenshot { width: 100%; height: auto; display: block; }
         .cheer-msg { font-size: 20px; font-weight: 700; margin-bottom: 30px; color: #ddd; }
-        .leaderboard { width: 80%; height: 40vh; background: #1a1a1a; border-radius: 20px; padding: 20px; margin-bottom: 40px; border: 1px solid #333; overflow-y: auto; box-sizing: border-box; }
-        .rank-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #222; font-size: 16px; }
+        .leaderboard { width: 95%; height: 40vh; background: #1a1a1a; border-radius: 20px; padding: 15px; margin-bottom: 40px; border: 1px solid #333; overflow-y: auto; box-sizing: border-box; }
+        .leaderboard h3 { margin-top: 0; margin-bottom: 15px; font-size: 18px; color: #ffd700; }
+        .rank-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+        .rank-table th { padding: 10px; border-bottom: 2px solid #333; color: #888; font-weight: 500; }
+        .rank-table td { padding: 12px 8px; border-bottom: 1px solid #222; }
+        .rank-item.my-rank { outline: 2px solid #3498db; border-radius: 10px; background: rgba(52, 152, 219, 0.1); }
+        .rank-medal { font-size: 20px; }
 
         #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.7); z-index: 25; cursor: pointer; }
         .start-text { font-size: 32px; font-weight: bold; color: white; animation: pulse 2s infinite; }
@@ -74,7 +105,13 @@
     <div id="bg-layer"></div>
 
     <section id="landing-page" class="page active">
-        <h1 class="logo">마음 쌓기</h1>
+        <div class="landing-illustration">
+            <div class="landing-moon"></div>
+            <div class="landing-stone stone-white" style="z-index: 4;"></div>
+            <div class="landing-stone stone-gray" style="z-index: 3;"></div>
+            <div class="landing-stone stone-dark" style="z-index: 2;"></div>
+        </div>
+        <h1 class="logo">돌탑의 달인</h1>
         <p class="sub-logo">당신의 소원을 돌탑에 담아보세요.</p>
         <p style="font-size: 14px; color: #aaa; margin-top: -28px; margin-bottom: 28px;">지금까지 <span id="total-towers">0</span>개의 돌탑이 쌓였어요</p>
         <div class="input-group">
@@ -110,12 +147,12 @@
         <div class="screenshot-container">
             <img id="final-screenshot" src="" alt="나의 돌탑">
         </div>
-        <p class="cheer-msg">당신의 소원이<br>꼭 이루어지길 바랍니돌.<br><br><span style="font-size: 16px; opacity: 0.8;">- 돌멩이 일동 -</span></p>
+        <p class="cheer-msg">당신의 소원이<br>꼭 이뤄지길 바라겠돌🪨<br><br><span style="font-size: 16px; opacity: 0.8;">- 돌탑 구성원 일동 -</span></p>
         <div class="leaderboard">
-            <h3>다른 사람들의 마음</h3>
+            <h3>돌탑 달인 랭킹</h3>
             <div id="leaderboard-list"></div>
         </div>
-        <button class="retry-btn" style="margin-top: 40px; background: none; color: #666; border: none; text-decoration: underline;" onclick="location.reload()">다시 시작하기</button>
+        <button class="retry-btn" style="margin-top: 40px; background: none; color: #666; border: none; text-decoration: underline;" onclick="location.reload()">새 돌탑 쌓기</button>
     </section>
 </div>
 
@@ -186,9 +223,10 @@
             
             const nextTrial = (trials && trials.length > 0) ? trials[0].trial + 1 : 1;
             
+            // 초기 floor는 1, is_wish는 0(진행중/실패)으로 시작
             const { data } = await supabaseClient
                 .from('stone_towers')
-                .insert([{ nickname, trial: nextTrial, floor: 1 }])
+                .insert([{ nickname, trial: nextTrial, floor: 1, is_wish: 0 }])
                 .select();
             
             if (data && data.length > 0) currentSessionId = data[0].id;
@@ -224,38 +262,82 @@
     };
 
     function captureFinalTower() {
-        const matterCanvas = document.querySelector('#canvas-container canvas');
         const bgLayer = document.getElementById('bg-layer');
         const finalImg = document.getElementById('final-screenshot');
-        if (!matterCanvas || !bgLayer || !finalImg) return;
+        if (!finalImg || stones.length === 0) return;
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = matterCanvas.width; tempCanvas.height = matterCanvas.height;
-        const ctx = tempCanvas.getContext('2d');
+        // 1. 전체 돌탑의 범위 계산 (최상단 돌부터 바닥까지)
+        let minTopY = ground.position.y;
+        stones.forEach(s => { if (s.bounds.min.y < minTopY) minTopY = s.bounds.min.y; });
         
+        const towerBottomY = ground.position.y + 50; 
+        const totalTowerHeight = towerBottomY - minTopY + 100; // 여백 포함
+        const captureWidth = gameWidth;
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = captureWidth; tempCanvas.height = totalTowerHeight;
+        const ctx = tempCanvas.getContext('2d');
+
         const bgUrl = bgLayer.style.backgroundImage.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
-        const renderImg = (bg) => {
-            ctx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+        const renderTower = (bg) => {
+            ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // 배경 그리기 (반복/확대해서 채움)
             if (bg) {
-                const cR = tempCanvas.width / tempCanvas.height;
-                const iR = bg.width / bg.height;
-                let dw, dh, ox, oy;
-                if (cR > iR) { dw = tempCanvas.width; dh = tempCanvas.width / iR; ox = 0; oy = (tempCanvas.height - dh) / 2; }
-                else { dw = tempCanvas.height * iR; dh = tempCanvas.height; ox = (tempCanvas.width - dw) / 2; oy = 0; }
-                ctx.save(); ctx.globalAlpha = 0.35; ctx.drawImage(bg, ox, oy, dw, dh); ctx.restore();
+                ctx.save(); ctx.globalAlpha = 0.25;
+                const scale = Math.max(tempCanvas.width / bg.width, tempCanvas.height / bg.height);
+                ctx.drawImage(bg, (tempCanvas.width - bg.width*scale)/2, (tempCanvas.height - bg.height*scale)/2, bg.width*scale, bg.height*scale);
+                ctx.restore();
             }
-            const bOffset = (window.innerWidth <= 500) ? 200 : 150;
-            const bBottomY = gameHeight - bOffset + 25;
-            const scale = tempCanvas.height / bBottomY;
-            const destW = gameWidth * scale;
-            ctx.drawImage(matterCanvas, 0, 0, gameWidth, bBottomY, (tempCanvas.width - destW) / 2, 0, destW, tempCanvas.height);
+
+            // 모든 돌 그리기 (Y좌표 보정: minTopY가 0에 가깝게)
+            const offsetY = -minTopY + 50;
+            ctx.save(); ctx.translate(0, offsetY);
+            
+            // 바닥 데코 먼저
+            groundDeco.forEach(deco => {
+                ctx.save(); ctx.translate(deco.x, deco.y); ctx.rotate(deco.angle);
+                ctx.fillStyle = deco.color;
+                ctx.beginPath(); deco.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
+                ctx.save(); ctx.clip(); drawStonePattern(ctx, deco.pattern, deco.seed, deco.w, deco.h); ctx.restore();
+                ctx.restore();
+            });
+
+            // 돌탑 구성원들
+            [ground, ...stones].forEach(body => {
+                const { x, y } = body.position;
+                ctx.save();
+                ctx.fillStyle = (body.render.fillStyle === 'rainbow') ? '#ffcc00' : body.render.fillStyle;
+                (body.parts.length > 1 ? body.parts.slice(1) : [body]).forEach(p => {
+                    ctx.beginPath(); p.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
+                    if (body.label !== 'ground') {
+                        ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.12)'; 
+                        const bw = body.bounds.max.x - body.bounds.min.x, bh = body.bounds.max.y - body.bounds.min.y;
+                        ctx.fillRect(body.position.x - bw, body.position.y + bh/6, bw*2, bh); ctx.restore();
+                    }
+                });
+                if (body.patternType && body.patternType !== 'rainbow') {
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle); ctx.beginPath();
+                    (body.parts.length > 1 ? body.parts[1].vertices : body.vertices).forEach((v, i) => { const lx = v.x-x, ly = v.y-y, cos = Math.cos(-body.angle), sin = Math.sin(-body.angle); i === 0 ? ctx.moveTo(lx*cos-ly*sin, lx*sin+ly*cos) : ctx.lineTo(lx*cos-ly*sin, lx*sin+ly*cos); });
+                    ctx.closePath(); ctx.clip(); drawStonePattern(ctx, body.patternType, body.patternSeed, body.bounds.max.x-body.bounds.min.x, body.bounds.max.y-body.bounds.min.y); ctx.restore();
+                }
+                ctx.restore();
+                if (body.label !== 'ground') {
+                    ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
+                    ctx.fillStyle = body.render.fillStyle === 'rainbow' ? '#fff' : (body.render.fillStyle === '#404040' || body.render.fillStyle === '#707070' ? '#ddd' : '#333');
+                    ctx.textAlign = 'center'; ctx.font = 'bold 20px Arial'; ctx.fillText(body.emojiPair ? (body.speed < 0.3 ? body.emojiPair.stable : body.emojiPair.unstable) : '●◡●', 0, 5); ctx.restore();
+                }
+            });
+            ctx.restore();
+            
             finalImg.src = tempCanvas.toDataURL('image/png');
         };
 
         if (bgUrl && bgUrl !== 'none') {
             const img = new Image(); img.crossOrigin = "anonymous";
-            img.onload = () => renderImg(img); img.onerror = () => renderImg(null); img.src = bgUrl;
-        } else renderImg(null);
+            img.onload = () => renderTower(img); img.onerror = () => renderTower(null); img.src = bgUrl;
+        } else renderTower(null);
     }
 
     function initPhysics() {
@@ -277,16 +359,38 @@
         Events.on(render, 'afterRender', () => {
             const ctx = render.context; const now = Date.now();
             ctx.save(); ctx.translate(-render.bounds.min.x, -render.bounds.min.y);
+
+            // 1. 하단 회색 영역 데코레이션 (돌 쌓인 형상)
+            groundDeco.forEach(deco => {
+                ctx.save(); ctx.translate(deco.x, deco.y); ctx.rotate(deco.angle);
+                ctx.fillStyle = deco.color;
+                ctx.beginPath(); deco.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
+                // 음영
+                ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(-deco.w, deco.h/6, deco.w*2, deco.h); ctx.restore();
+                // 패턴
+                ctx.save(); ctx.clip(); drawStonePattern(ctx, deco.pattern, deco.seed, deco.w, deco.h); ctx.restore();
+                ctx.restore();
+            });
+
+            // 2. 터치 전 대강의 점선 타원 가이드
+            if (isGameStarted && !isGameOver && !isPressing && !isWishFlow && stones.filter(s => !s.isStatic).length === 0) {
+                ctx.save(); ctx.translate(currentInputPos.x, currentInputPos.y);
+                ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2;
+                ctx.beginPath(); nextStoneData.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.stroke();
+                ctx.restore();
+            }
+
             if (isGameStarted && !isGameOver && isPressing && stones.filter(s => !s.isStatic).length === 0) {
                 ctx.save(); ctx.translate(currentInputPos.x, currentInputPos.y); ctx.globalAlpha = 0.6; ctx.fillStyle = isValidLocation ? '#f5f5f5' : '#ff7675';
                 ctx.beginPath(); nextStoneData.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
+                // 미리보기 돌 음영
+                ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(-nextStoneData.w, nextStoneData.h/6, nextStoneData.w*2, nextStoneData.h); ctx.restore();
                 if (nextStoneData.pattern) { ctx.save(); ctx.clip(); drawStonePattern(ctx, nextStoneData.pattern, nextStoneData.seed, nextStoneData.w, nextStoneData.h); ctx.restore(); }
                 ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center'; ctx.fillText(nextStoneData.emojiPair.stable, 0, 5);
                 ctx.globalAlpha = 1; ctx.font = '35px Arial'; ctx.fillText('👆', nextStoneData.w / 2, 20); ctx.restore();
             }
             [ground, ...stones].forEach(body => {
                 const { x, y } = body.position;
-                // [수정] 기반석 멈춤 위치도 bOffset에 맞춰 수정
                 const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
                 const stopY = gameHeight - currentBOffset;
                 if (body.label === 'baseStone' && !body.isStatic && y >= stopY) { Body.setStatic(body, true); Body.setPosition(body, { x: gameWidth / 2, y: stopY }); }
@@ -294,7 +398,16 @@
                 ctx.save();
                 if (body.render.fillStyle === 'rainbow') { const h = (now / 30) % 360; ctx.fillStyle = `hsl(${h}, 80%, 70%)`; ctx.shadowColor = `hsl(${h}, 80%, 70%)`; ctx.shadowBlur = 15; }
                 else ctx.fillStyle = body.render.fillStyle;
-                (body.parts.length > 1 ? body.parts.slice(1) : [body]).forEach(p => { ctx.beginPath(); p.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill(); });
+                (body.parts.length > 1 ? body.parts.slice(1) : [body]).forEach(p => { 
+                    ctx.beginPath(); p.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill(); 
+                    // 쌓인 돌 음영 추가
+                    if (body.label !== 'ground') {
+                        ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.12)'; 
+                        const bw = body.bounds.max.x - body.bounds.min.x;
+                        const bh = body.bounds.max.y - body.bounds.min.y;
+                        ctx.fillRect(body.position.x - bw, body.position.y + bh/6, bw*2, bh); ctx.restore();
+                    }
+                });
                 if (body.patternType && body.patternType !== 'rainbow') {
                     ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle); ctx.beginPath();
                     (body.parts.length > 1 ? body.parts[1].vertices : body.vertices).forEach((v, i) => { const lx = v.x-x, ly = v.y-y, cos = Math.cos(-body.angle), sin = Math.sin(-body.angle); i === 0 ? ctx.moveTo(lx*cos-ly*sin, lx*sin+ly*cos) : ctx.lineTo(lx*cos-ly*sin, lx*sin+ly*cos); });
@@ -329,6 +442,16 @@
         if (isGameOver) return; 
         isGameOver = true; 
         isPressing = false; 
+
+        // [Supabase] 무너졌을 때의 최종 층수 기록 (기반석 포함 현재 안정적이었던 층수는 stoneCount)
+        if (currentSessionId) {
+            supabaseClient
+                .from('stone_towers')
+                .update({ floor: stoneCount }) 
+                .eq('id', currentSessionId)
+                .then(() => {});
+        }
+
         setTimeout(() => { 
             alert("돌탑이 무너졌습니다! 다시 도전해보세요."); 
             
@@ -356,7 +479,7 @@
             stones.push(baseStone);
             Composite.add(engine.world, baseStone);
             
-            // [Supabase] 기반석 드롭(재시작) 시 트라이 추가
+            // [Supabase] 기반석 드롭(재시작) 시 트라이 추가 및 새 세션 시작
             try {
                 supabaseClient
                     .from('stone_towers')
@@ -368,7 +491,7 @@
                         const nextTrial = (trials && trials.length > 0) ? trials[0].trial + 1 : 1;
                         return supabaseClient
                             .from('stone_towers')
-                            .insert([{ nickname, trial: nextTrial, floor: 1 }])
+                            .insert([{ nickname, trial: nextTrial, floor: 1, is_wish: 0 }])
                             .select();
                     })
                     .then(({ data }) => {
@@ -392,23 +515,41 @@
             try {
                 await supabaseClient
                     .from('stone_towers')
-                    .update({ floor: stoneCount + 1, wish: wishText })
+                    .update({ floor: stoneCount + 1, wish: wishText, is_wish: 1 })
                     .eq('id', currentSessionId);
             } catch (err) {}
         }
 
-        // 2) Top3 조회 (가장 높은 층수 기준)
+        // 2) 랭킹 데이터 조회 (Top 100 정도 조회하여 내 등수 확인)
         try {
-            const { data: topData } = await supabaseClient
+            const { data: rankData } = await supabaseClient
                 .from('stone_towers')
-                .select('nickname, floor')
+                .select('id, nickname, floor')
+                .eq('is_wish', 1)
                 .order('floor', { ascending: false })
-                .limit(3);
+                .limit(50);
 
-            if (topData) {
-                listEl.innerHTML = topData.map((item, idx) => {
-                    return `<div class="rank-item"><span>${idx + 1}위 / ${item.nickname}</span><span>${item.floor}층</span></div>`;
-                }).join('');
+            if (rankData) {
+                let html = `<table class="rank-table">
+                    <thead><tr><th>등수</th><th>닉네임</th><th>층수</th></tr></thead>
+                    <tbody>`;
+                
+                rankData.forEach((item, idx) => {
+                    const isMyRow = (currentSessionId && item.id === currentSessionId);
+                    let rankDisplay = (idx + 1) + "위";
+                    if (idx === 0) rankDisplay = '<span class="rank-medal">🥇</span>';
+                    else if (idx === 1) rankDisplay = '<span class="rank-medal">🥈</span>';
+                    else if (idx === 2) rankDisplay = '<span class="rank-medal">🥉</span>';
+
+                    html += `<tr class="rank-item ${isMyRow ? 'my-rank' : ''}">
+                        <td>${rankDisplay}</td>
+                        <td>${item.nickname}</td>
+                        <td>${item.floor}층</td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>`;
+                listEl.innerHTML = html;
             }
         } catch (err) {}
     }
@@ -423,6 +564,22 @@
                 if (el) el.textContent = String(count);
             }
         } catch (e) {}
+    }
+
+    let groundDeco = [];
+    function initGroundDeco() {
+        groundDeco = [];
+        const colors = ['#404040', '#707070', '#b0b0b0', '#505050'];
+        const numStones = 12;
+        for (let i = 0; i < numStones; i++) {
+            const w = 60 + Math.random() * 40;
+            const h = w * 0.5;
+            const x = (gameWidth / numStones) * i + (Math.random() * 20 - 10);
+            const y = gameHeight - (window.innerWidth <= 500 ? 120 : 100) + 10 + (Math.random() * 10);
+            const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
+            const vertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
+            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 0.2, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
+        }
     }
 
     function resetScreenHeight() { document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
@@ -488,6 +645,7 @@
     window.onload = () => {
         if (window.decomp) Common.setDecomp(window.decomp);
         resetScreenHeight(); initPhysics(); updateEnvironment(1);
+        initGroundDeco();
         // [Supabase] 전체 돌탑 누적 횟수 로드
         loadGlobalStats();
         window.addEventListener('resize', resetScreenHeight);
