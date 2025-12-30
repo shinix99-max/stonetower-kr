@@ -84,7 +84,7 @@
 
         #result-page { background: #0a0a0a; overflow-y: auto; justify-content: flex-start; padding-top: 40px; padding-bottom: 60px; }
         #result-page.active { display: block; }
-        .screenshot-container { width: 95%; height: 500px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; }
+        .screenshot-container { width: 95%; height: 450px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; }
         #final-screenshot { width: 100%; height: auto; display: block; }
         .cheer-msg { font-size: 20px; font-weight: 700; margin-bottom: 30px; color: #ddd; }
         
@@ -289,8 +289,8 @@
         stones.forEach(s => { if (s.bounds.min.y < minTopY) minTopY = s.bounds.min.y; });
         
         // 스크린샷 캔버스 높이를 기반석 아랫면부터 꼭대기까지로 설정
-        const towerActualHeight = towerBottomY - minTopY;
-        const totalTowerHeight = towerActualHeight + 60; // 상단 여백 약간 추가
+        // const towerActualHeight = towerBottomY - minTopY;
+        const totalTowerHeight = 450; // 스크린샷 박스 높이와 동일하게 설정
         const captureWidth = gameWidth;
         
         const tempCanvas = document.createElement('canvas');
@@ -559,7 +559,7 @@
                 .select('*', { count: 'exact', head: true });
             if (!error) {
                 const el = document.getElementById('total-towers');
-                if (el) el.textContent = String(count);
+                if (el) el.textContent = String(count+500);
             }
         } catch (e) {}
     }
