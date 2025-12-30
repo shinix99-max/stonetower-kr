@@ -160,6 +160,30 @@
             50% { transform: scale(1.05); opacity: 1; }
             100% { transform: scale(1); opacity: 0.8; }
         }
+
+        /* 달 애니메이션 전용 스타일 */
+        #moon-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            pointer-events: none;
+        }
+        .moon-icon {
+            font-size: 100px;
+            filter: drop-shadow(0 0 30px rgba(255, 255, 200, 0.9));
+            transform: translateY(150px);
+            opacity: 0;
+            transition: all 2.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .moon-icon.rising {
+            transform: translateY(-100px);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -177,6 +201,9 @@
     </section>
 
     <section id="game-page" class="page">
+        <div id="moon-overlay">
+            <div class="moon-icon">🌕</div>
+        </div>
         <button id="wish-btn" onclick="goToWish()">소원 빌기</button>
         <div id="info">
             <div class="stats"><span id="user-nickname-display">유저</span>님의 돌탑</div>
@@ -325,9 +352,25 @@
         // [추가] 돌들이 모두 멈춘(Static) 상태인지 확인
         const activeStones = stones.filter(s => !s.isStatic);
         if (activeStones.length > 0) {
-            alert("돌들이 아직 움직이고 있습니다. 잠시만 기다려주세요!");
-            return;
+            // 미세한 움직임은 허용하기 위해 속도 합계 체크
+            const totalSpeed = activeStones.reduce((acc, s) => acc + s.speed, 0);
+            if (totalSpeed > 0.5) {
+                alert("돌들이 아직 움직이고 있습니다. 잠시만 기다려주세요!");
+                return;
+            }
         }
+
+        // 1. 달 애니메이션 시작
+        const moonOverlay = document.getElementById('moon-overlay');
+        const moonIcon = moonOverlay.querySelector('.moon-icon');
+        
+        moonOverlay.style.display = 'flex';
+        setTimeout(() => {
+            moonIcon.classList.add('rising');
+        }, 50);
+
+        // 애니메이션 감상을 위해 2.8초 대기
+        await new Promise(resolve => setTimeout(resolve, 2800));
 
         const matterCanvas = document.querySelector('#canvas-container canvas');
         const bgLayer = document.getElementById('bg-layer');
@@ -505,12 +548,13 @@
         const targetY = gameHeight - 80; // 바닥에서 조금 더 위로 (기존 50 -> 80)
         
         baseStone = Bodies.rectangle(gameWidth / 2, -50, baseWidth, baseHeight, { 
-            friction: 10.0, // 마찰력 극대화 (기존 2.0)
-            frictionStatic: 1000.0, // 정적 마찰력 극대화 (기존 100.0)
+            friction: 10.0, 
+            frictionStatic: 1000.0, 
             density: 200, 
             chamfer: { radius: 25 }, 
             label: 'baseStone',
             isStatic: false, 
+            emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, // 기반석 기본 표정
             render: { fillStyle: '#dcdcdc' } 
         });
         
@@ -551,9 +595,68 @@
         const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
         const scaledVertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
         
-        nextStoneData = { w: w, h: h, vertices: scaledVertices };
-        // [수정] 돌 생성 위치를 조금 더 낮춤 (250 -> 320)
-        currentInputPos = { x: gameWidth / 2, y: 320 + targetCameraY }; 
+        // [추가] 랜덤 패턴 결정
+        const patterns = ['sedimentary', 'basalt', 'granite'];
+        const patternType = patterns[Math.floor(Math.random() * patterns.length)];
+
+        // [추가] 랜덤 표정 쌍 결정
+        const stableList = ["●◡●", "(●'◡'●)"];
+        if (Math.random() < 0.05) stableList.push("/ᐠ｡ꞈ｡ᐟ\\"); // 5% 확률로 고양이
+        const unstableList = ["⊙ｏ⊙", "⊙﹏⊙"];
+        
+        const emojiPair = {
+            stable: stableList[Math.floor(Math.random() * stableList.length)],
+            unstable: unstableList[Math.floor(Math.random() * unstableList.length)]
+        };
+        
+        nextStoneData = { 
+            w: w, h: h, 
+            vertices: scaledVertices, 
+            pattern: patternType,
+            seed: Math.random(), // 패턴의 일관성을 위한 시드값
+            emojiPair: emojiPair
+        };
+
+        // [수정] 4개 이후부터는 더 높게 (320 -> 150)
+        const spawnY = stoneCount < 4 ? 320 : 150;
+        currentInputPos = { x: gameWidth / 2, y: spawnY + targetCameraY }; 
+    }
+
+    // [추가] 돌 패턴을 그리는 헬퍼 함수
+    function drawStonePattern(ctx, type, seed, w, h) {
+        ctx.save();
+        if (type === 'sedimentary') {
+            // 퇴적암: 줄무늬
+            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+            ctx.lineWidth = 3;
+            for(let i = -h; i < h; i += 8) {
+                ctx.beginPath();
+                ctx.moveTo(-w, i + (seed * 10));
+                ctx.lineTo(w, i + (seed * 10));
+                ctx.stroke();
+            }
+        } else if (type === 'basalt') {
+            // 현무암: 점박이 (다양한 크기)
+            ctx.fillStyle = 'rgba(0,0,0,0.18)';
+            for(let i = 0; i < 12; i++) {
+                const px = Math.sin(seed * i * 543) * (w * 0.4);
+                const py = Math.cos(seed * i * 123) * (h * 0.4);
+                const radius = 1 + (Math.abs(Math.sin(i)) * 4);
+                ctx.beginPath();
+                ctx.arc(px, py, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (type === 'granite') {
+            // 화강암: 얼룩덜룩
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            for(let i = 0; i < 25; i++) {
+                const px = Math.cos(seed * i * 987) * (w * 0.45);
+                const py = Math.sin(seed * i * 456) * (h * 0.45);
+                const size = 1 + (Math.abs(Math.sin(i * 2)) * 3);
+                ctx.fillRect(px, py, size, size);
+            }
+        }
+        ctx.restore();
     }
 
     function initPhysics() {
@@ -637,10 +740,18 @@
                 }
                 context.closePath();
                 context.fill();
+
+                // [추가] 미리보기에도 패턴 적용
+                if (nextStoneData.pattern) {
+                    context.save();
+                    context.clip(); // 돌 모양 안쪽으로만 그리기
+                    drawStonePattern(context, nextStoneData.pattern, nextStoneData.seed, nextStoneData.w, nextStoneData.h);
+                    context.restore();
+                }
                 
                 context.fillStyle = '#333';
                 context.font = 'bold 20px Arial'; context.textAlign = 'center';
-                context.fillText('●◡●', 0, 5); 
+                context.fillText(nextStoneData.emojiPair.stable, 0, 5); 
 
                 // [수정] 👆 에모지를 돌의 오른쪽 끝에 위치시킴
                 context.globalAlpha = 1.0;
@@ -702,6 +813,36 @@
                     context.closePath();
                     context.fill();
                 });
+
+                // [추가] 쌓인 돌에 패턴 그리기
+                if (body.patternType && body.patternType !== 'rainbow') {
+                    context.save();
+                    // 돌의 중심 위치로 이동 후 회전 적용
+                    context.translate(x, y);
+                    context.rotate(body.angle);
+                    
+                    // 클리핑 경로 다시 생성 (로컬 좌표계 기준)
+                    context.beginPath();
+                    const localVertices = body.parts.length > 1 ? body.parts[1].vertices : body.vertices;
+                    localVertices.forEach((v, idx) => {
+                        const lx = v.x - x;
+                        const ly = v.y - y;
+                        // 회전 역산하여 로컬 좌표 정렬
+                        const cos = Math.cos(-body.angle);
+                        const sin = Math.sin(-body.angle);
+                        const rx = lx * cos - ly * sin;
+                        const ry = lx * sin + ly * cos;
+                        if (idx === 0) context.moveTo(rx, ry);
+                        else context.lineTo(rx, ry);
+                    });
+                    context.closePath();
+                    context.clip();
+                    
+                    // 패턴 그리기
+                    drawStonePattern(context, body.patternType, body.patternSeed, body.bounds.max.x - body.bounds.min.x, body.bounds.max.y - body.bounds.min.y);
+                    context.restore();
+                }
+
                 context.restore();
 
                 // [수정] 바닥(ground)은 어떤 경우에도 표정을 그리지 않음
@@ -722,8 +863,11 @@
                 context.textAlign = 'center'; 
                 context.font = 'bold 20px Arial';
                 
-                let emoji = body.speed < 0.3 ? '●◡●' : '⊙ｏ⊙';
-                if (body.label === 'baseStone' && body.isStatic) emoji = '●◡●';
+                let emoji = '●◡●';
+                if (body.emojiPair) {
+                    emoji = body.speed < 0.3 ? body.emojiPair.stable : body.emojiPair.unstable;
+                    if (body.label === 'baseStone' && body.isStatic) emoji = body.emojiPair.stable;
+                }
                 
                 context.fillText(emoji, 0, 5);
                 context.restore();
@@ -883,8 +1027,11 @@
             friction: 10.0, 
             frictionStatic: 1000.0, 
             restitution: 0, 
-            density: 100, // [물리 개선] 밀도를 높여 묵직한 무게감 부여 (50 -> 100)
+            density: 100, 
             label: 'stone',
+            patternType: nextStoneData.pattern, 
+            patternSeed: nextStoneData.seed,
+            emojiPair: color === 'rainbow' ? { stable: '✪ ω ✪', unstable: '✪ ω ✪' } : nextStoneData.emojiPair,
             render: { 
                 fillStyle: color,
                 visible: false 
@@ -929,10 +1076,15 @@
         
         // 3. UI 초기화
         const overlay = document.getElementById('start-overlay');
+        const moonOverlay = document.getElementById('moon-overlay');
+        const moonIcon = moonOverlay ? moonOverlay.querySelector('.moon-icon') : null;
+        
         if (overlay) {
             overlay.style.display = 'flex';
             overlay.style.pointerEvents = 'auto';
         }
+        if (moonOverlay) moonOverlay.style.display = 'none';
+        if (moonIcon) moonIcon.classList.remove('rising');
         
         updateEnvironment(1);
     }
