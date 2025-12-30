@@ -75,14 +75,24 @@
         .guide-text { position: absolute; bottom: 50px; width: 100%; text-align: center; color: rgba(255,255,255,0.8); font-size: 15px; font-weight: 500; pointer-events: none; z-index: 20; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
 
         #wish-page { background: rgba(10, 10, 10, 0.9); z-index: 70; }
-        textarea#wish-text { width: 90%; height: 180px; padding: 20px; border-radius: 20px; border: 2px solid #333; background: #1a1a1a; color: white; margin-bottom: 30px; resize: none; font-size: 18px; outline: none; box-sizing: border-box; }
+        textarea#wish-text { width: 90%; height: 72px; padding: 20px; border-radius: 20px; border: 2px solid #333; background: #1a1a1a; color: white; margin-bottom: 30px; resize: none; font-size: 18px; outline: none; box-sizing: border-box; }
         .submit-wish-btn { background: var(--primary); color: white; padding: 18px 40px; border-radius: 15px; border: none; font-weight: bold; font-size: 18px; cursor: pointer; width: 90%; }
 
-        #result-page { background: #0a0a0a; overflow-y: auto; justify-content: flex-start; padding-top: 40px; padding-bottom: 40px; }
-        .screenshot-container { width: 90%; max-height: 50vh; border-radius: 20px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid #333; background: #1a1a1a; }
+        #result-page { background: #0a0a0a; overflow-y: auto; justify-content: flex-start; padding-top: 40px; padding-bottom: 60px; display: block; }
+        .screenshot-container { width: 95%; max-height: none; height: auto; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; }
         #final-screenshot { width: 100%; height: auto; display: block; }
         .cheer-msg { font-size: 20px; font-weight: 700; margin-bottom: 30px; color: #ddd; }
-        .leaderboard { width: 95%; height: 40vh; background: #1a1a1a; border-radius: 20px; padding: 15px; margin-bottom: 40px; border: 1px solid #333; overflow-y: auto; box-sizing: border-box; }
+        
+        .retry-btn { 
+            background: var(--primary); color: white; padding: 20px 40px; 
+            border-radius: 15px; border: none; font-weight: 800; font-size: 22px; 
+            cursor: pointer; width: 90%; margin: 20px auto 40px auto; display: block;
+            box-shadow: 0 5px 15px rgba(74, 105, 189, 0.4);
+            transition: transform 0.2s;
+        }
+        .retry-btn:active { transform: scale(0.98); }
+
+        .leaderboard { width: 95%; height: auto; min-height: 40vh; background: #1a1a1a; border-radius: 20px; padding: 15px; margin: 0 auto 40px auto; border: 1px solid #333; box-sizing: border-box; }
         .leaderboard h3 { margin-top: 0; margin-bottom: 15px; font-size: 18px; color: #ffd700; }
         .rank-table { width: 100%; border-collapse: collapse; font-size: 15px; }
         .rank-table th { padding: 10px; border-bottom: 2px solid #333; color: #888; font-weight: 500; }
@@ -148,11 +158,11 @@
             <img id="final-screenshot" src="" alt="나의 돌탑">
         </div>
         <p class="cheer-msg">당신의 소원이<br>꼭 이뤄지길 바라겠돌🪨<br><br><span style="font-size: 16px; opacity: 0.8;">- 돌탑 구성원 일동 -</span></p>
+        <button class="retry-btn" onclick="location.reload()">새 돌탑 쌓기</button>
         <div class="leaderboard">
             <h3>돌탑 달인 랭킹</h3>
             <div id="leaderboard-list"></div>
         </div>
-        <button class="retry-btn" style="margin-top: 40px; background: none; color: #666; border: none; text-decoration: underline;" onclick="location.reload()">새 돌탑 쌓기</button>
     </section>
 </div>
 
@@ -311,11 +321,6 @@
                 ctx.fillStyle = (body.render.fillStyle === 'rainbow') ? '#ffcc00' : body.render.fillStyle;
                 (body.parts.length > 1 ? body.parts.slice(1) : [body]).forEach(p => {
                     ctx.beginPath(); p.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
-                    if (body.label !== 'ground') {
-                        ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.12)'; 
-                        const bw = body.bounds.max.x - body.bounds.min.x, bh = body.bounds.max.y - body.bounds.min.y;
-                        ctx.fillRect(body.position.x - bw, body.position.y + bh/6, bw*2, bh); ctx.restore();
-                    }
                 });
                 if (body.patternType && body.patternType !== 'rainbow') {
                     ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle); ctx.beginPath();
@@ -365,10 +370,10 @@
                 ctx.save(); ctx.translate(deco.x, deco.y); ctx.rotate(deco.angle);
                 ctx.fillStyle = deco.color;
                 ctx.beginPath(); deco.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
-                // 음영
-                ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(-deco.w, deco.h/6, deco.w*2, deco.h); ctx.restore();
                 // 패턴
                 ctx.save(); ctx.clip(); drawStonePattern(ctx, deco.pattern, deco.seed, deco.w, deco.h); ctx.restore();
+                // 테두리 추가로 더 선명하게
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; ctx.stroke();
                 ctx.restore();
             });
 
@@ -383,8 +388,6 @@
             if (isGameStarted && !isGameOver && isPressing && stones.filter(s => !s.isStatic).length === 0) {
                 ctx.save(); ctx.translate(currentInputPos.x, currentInputPos.y); ctx.globalAlpha = 0.6; ctx.fillStyle = isValidLocation ? '#f5f5f5' : '#ff7675';
                 ctx.beginPath(); nextStoneData.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
-                // 미리보기 돌 음영
-                ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(-nextStoneData.w, nextStoneData.h/6, nextStoneData.w*2, nextStoneData.h); ctx.restore();
                 if (nextStoneData.pattern) { ctx.save(); ctx.clip(); drawStonePattern(ctx, nextStoneData.pattern, nextStoneData.seed, nextStoneData.w, nextStoneData.h); ctx.restore(); }
                 ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center'; ctx.fillText(nextStoneData.emojiPair.stable, 0, 5);
                 ctx.globalAlpha = 1; ctx.font = '35px Arial'; ctx.fillText('👆', nextStoneData.w / 2, 20); ctx.restore();
@@ -400,13 +403,6 @@
                 else ctx.fillStyle = body.render.fillStyle;
                 (body.parts.length > 1 ? body.parts.slice(1) : [body]).forEach(p => { 
                     ctx.beginPath(); p.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill(); 
-                    // 쌓인 돌 음영 추가
-                    if (body.label !== 'ground') {
-                        ctx.save(); ctx.clip(); ctx.fillStyle = 'rgba(0,0,0,0.12)'; 
-                        const bw = body.bounds.max.x - body.bounds.min.x;
-                        const bh = body.bounds.max.y - body.bounds.min.y;
-                        ctx.fillRect(body.position.x - bw, body.position.y + bh/6, bw*2, bh); ctx.restore();
-                    }
                 });
                 if (body.patternType && body.patternType !== 'rainbow') {
                     ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle); ctx.beginPath();
@@ -520,14 +516,14 @@
             } catch (err) {}
         }
 
-        // 2) 랭킹 데이터 조회 (Top 100 정도 조회하여 내 등수 확인)
+        // 2) 랭킹 데이터 조회 (최대 5위까지 정보만 표시)
         try {
             const { data: rankData } = await supabaseClient
                 .from('stone_towers')
                 .select('id, nickname, floor')
                 .eq('is_wish', 1)
                 .order('floor', { ascending: false })
-                .limit(50);
+                .limit(5);
 
             if (rankData) {
                 let html = `<table class="rank-table">
@@ -569,17 +565,22 @@
     let groundDeco = [];
     function initGroundDeco() {
         groundDeco = [];
-        const colors = ['#404040', '#707070', '#b0b0b0', '#505050'];
-        const numStones = 12;
+        const colors = ['#404040', '#707070', '#b0b0b0', '#505050', '#2d3436', '#636e72'];
+        const numStones = 25; // 개수 늘림
+        const bOffset = (window.innerWidth <= 500 ? 120 : 100);
         for (let i = 0; i < numStones; i++) {
-            const w = 60 + Math.random() * 40;
-            const h = w * 0.5;
-            const x = (gameWidth / numStones) * i + (Math.random() * 20 - 10);
-            const y = gameHeight - (window.innerWidth <= 500 ? 120 : 100) + 10 + (Math.random() * 10);
+            const w = 70 + Math.random() * 60; // 크기 약간 키움
+            const h = w * (0.4 + Math.random() * 0.2);
+            const x = Math.random() * gameWidth;
+            // 바닥 영역 상단에 겹겹이 쌓인 느낌으로 배치 (Y 좌표 조정)
+            const groundTopY = gameHeight - 1.5 * bOffset + 25;
+            const y = groundTopY + (Math.random() * 60 - 40); 
             const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
             const vertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
-            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 0.2, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
+            groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 0.5, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
         }
+        // Y좌표 기준으로 정렬하여 뒤쪽 돌이 먼저 그려지게 함
+        groundDeco.sort((a, b) => a.y - b.y);
     }
 
     function resetScreenHeight() { document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`); }
@@ -598,7 +599,8 @@
             pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(),
             emojiPair: { stable: sl[Math.floor(Math.random() * sl.length)], unstable: ["⊙ｏ⊙", "⊙﹏⊙"][Math.floor(Math.random() * 2)] }
         };
-        currentInputPos = { x: gameWidth / 2, y: (stoneCount < 4 ? 320 : 150) + targetCameraY };
+        // 5층 이후(stoneCount >= 4)의 생성 위치를 150에서 250으로 더 낮춤
+        currentInputPos = { x: gameWidth / 2, y: (stoneCount < 4 ? 320 : 250) + targetCameraY };
     }
     function drawStonePattern(ctx, type, seed, w, h) {
         ctx.save();
