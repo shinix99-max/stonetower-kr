@@ -34,12 +34,13 @@
         /* 오디오 컨트롤 스타일 */
         #audio-control {
             position: absolute; bottom: 30px; left: 30px; 
-            width: 44px; height: 44px; background: rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.3); border-radius: 50%;
+            width: 44px; height: 44px; background: rgba(255, 255, 255, 0.1);
+            border: 1.5px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
             display: none; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 100; backdrop-filter: blur(5px);
-            font-size: 20px;
+            cursor: pointer; z-index: 100; backdrop-filter: blur(8px);
+            font-size: 18px; transition: transform 0.2s;
         }
+        #audio-control:active { transform: scale(0.9); }
 
         #landing-page { background: linear-gradient(to bottom, #1a1a1a, #0a0a0a); z-index: 60; }
         .landing-illustration {
@@ -86,7 +87,6 @@
 
         #info { position: absolute; top: 30px; left: 30px; pointer-events: none; z-index: 20; text-align: left; }
         .stats { font-size: 20px; font-weight: 800; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.7); }
-        .guide-text { position: absolute; bottom: 50px; width: 100%; text-align: center; color: rgba(255,255,255,0.8); font-size: 15px; font-weight: 500; pointer-events: none; z-index: 20; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
 
         #wish-page { background: rgba(10, 10, 10, 0.9); z-index: 70; }
         textarea#wish-text { width: 90%; height: 72px; padding: 20px; border-radius: 20px; border: 2px solid #333; background: #1a1a1a; color: white; margin-bottom: 30px; resize: none; font-size: 18px; outline: none; box-sizing: border-box; }
@@ -113,7 +113,6 @@
         .rank-table th { padding: 10px; border-bottom: 2px solid #333; color: #888; font-weight: 500; }
         .rank-table td { padding: 12px 8px; border-bottom: 1px solid #222; }
         .rank-item.my-rank { outline: 2px solid #3498db; border-radius: 10px; background: rgba(52, 152, 219, 0.1); }
-        .rank-medal { font-size: 20px; }
 
         #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.7); z-index: 25; cursor: pointer; }
         .start-text { font-size: 32px; font-weight: bold; color: white; animation: pulse 2s infinite; }
@@ -123,7 +122,6 @@
         .moon-icon { font-size: 100px; filter: drop-shadow(0 0 30px rgba(255, 255, 200, 0.9)); transform: translateY(150px); opacity: 0; transition: all 2.5s cubic-bezier(0.25, 0.1, 0.25, 1); }
         .moon-icon.rising { transform: translateY(-100px); opacity: 1; }
 
-        /* 커스텀 모달 스타일 */
         #custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: #222; padding: 30px; border-radius: 20px; width: 80%; max-width: 350px; text-align: center; border: 1px solid #444; }
         .modal-msg { font-size: 18px; color: white; margin-bottom: 25px; line-height: 1.5; }
@@ -139,8 +137,8 @@
     <audio id="bgm" src="./stonetower_bgm.mp3" loop></audio>
     
     <!-- 오디오 제어 버튼 -->
-    <div id="audio-control" onclick="toggleAudio()">
-        <span id="audio-icon">🔊</span>
+    <div id="audio-control" onclick="toggleAudio(event)">
+        <span id="audio-icon">♬</span>
     </div>
 
     <div id="custom-modal">
@@ -239,12 +237,13 @@
     let isWishFlow = false; 
 
     // 오디오 토글 함수
-    window.toggleAudio = () => {
+    window.toggleAudio = (e) => {
+        if (e) e.stopPropagation();
         const bgm = document.getElementById('bgm');
         const icon = document.getElementById('audio-icon');
         isMuted = !isMuted;
         bgm.muted = isMuted;
-        icon.textContent = isMuted ? '🔇' : '🔊';
+        icon.textContent = isMuted ? '🔇' : '♬';
     };
 
     function showModal(msg) {
@@ -389,7 +388,7 @@
                 if (body.label !== 'ground') {
                     ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
                     ctx.fillStyle = body.render.fillStyle === 'rainbow' ? '#fff' : (body.render.fillStyle === '#404040' || body.render.fillStyle === '#707070' ? '#ddd' : '#333');
-                    ctx.textAlign = 'center'; ctx.font = 'bold 20px Arial'; ctx.fillText(body.emojiPair ? (body.speed < 0.3 ? body.emojiPair.stable : body.emojiPair.unstable) : '●◡●', 0, 5); ctx.restore();
+                    ctx.textAlign = 'center'; ctx.font = 'bold 20px Arial'; ctx.fillText(body.emojiPair ? (body.speed < 0.3 ? body.emojiPair.stable : body.emojiPair.unstable) : '(˶ᵔᵕᵔ˶)', 0, 5); ctx.restore();
                 }
             });
             ctx.restore();
@@ -414,7 +413,7 @@
         
         const bOffset = isMobile ? 120 : 100;
         ground = Bodies.rectangle(gameWidth / 2, gameHeight + 100 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: 'transparent' } });
-        baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { friction: 10, frictionStatic: 1000, density: 200, chamfer: { radius: 25 }, label: 'baseStone', isStatic: true, emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, render: { fillStyle: '#dcdcdc' } });
+        baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { friction: 10, frictionStatic: 1000, density: 200, chamfer: { radius: 25 }, label: 'baseStone', isStatic: true, emojiPair: { stable: "(˶ᵔᵕᵔ˶)", unstable: "(⊙﹏⊙)" }, render: { fillStyle: '#dcdcdc' } });
         stones.push(baseStone); Composite.add(engine.world, [ground, baseStone]);
         
         Events.on(render, 'beforeRender', () => { cameraY += (targetCameraY - cameraY) * 0.05; Bounds.shift(render.bounds, { x: 0, y: cameraY }); });
@@ -466,7 +465,7 @@
                 if (body.label !== 'ground') {
                     ctx.save(); ctx.translate(x, y); ctx.rotate(body.angle);
                     ctx.fillStyle = body.render.fillStyle === 'rainbow' ? '#fff' : (body.render.fillStyle === '#404040' || body.render.fillStyle === '#707070' ? '#ddd' : '#333');
-                    ctx.textAlign = 'center'; ctx.font = 'bold 20px Arial'; ctx.fillText(body.emojiPair ? (body.speed < 0.3 ? body.emojiPair.stable : body.emojiPair.unstable) : '●◡●', 0, 5); ctx.restore();
+                    ctx.textAlign = 'center'; ctx.font = 'bold 20px Arial'; ctx.fillText(body.emojiPair ? (body.speed < 0.3 ? body.emojiPair.stable : body.emojiPair.unstable) : '(˶ᵔᵕᵔ˶)', 0, 5); ctx.restore();
                 }
             });
             ctx.restore();
@@ -518,7 +517,7 @@
                 chamfer: { radius: 25 }, 
                 label: 'baseStone', 
                 isStatic: false, 
-                emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, 
+                emojiPair: { stable: "(˶ᵔᵕᵔ˶)", unstable: "(⊙﹏⊙)" }, 
                 render: { fillStyle: '#dcdcdc' } 
             });
             stones.push(baseStone);
@@ -586,9 +585,9 @@
                 
                 top3.forEach((item, idx) => {
                     let rankDisplay = (idx + 1) + "위";
-                    if (idx === 0) rankDisplay = '<span class="rank-medal">🥇</span>';
-                    else if (idx === 1) rankDisplay = '<span class="rank-medal">🥈</span>';
-                    else if (idx === 2) rankDisplay = '<span class="rank-medal">🥉</span>';
+                    if (idx === 0) rankDisplay = '🥇';
+                    else if (idx === 1) rankDisplay = '🥈';
+                    else if (idx === 2) rankDisplay = '🥉';
 
                     const isMyRow = (currentSessionId && item.id === currentSessionId);
                     html += `<tr class="rank-item ${isMyRow ? 'my-rank' : ''}">
@@ -656,11 +655,11 @@
     function prepareNextStone() {
         const w = 110 + Math.random() * 40; const h = w * 0.6;
         const temp = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
-        const sl = ["●◡●", "(●'◡'●)"]; if (Math.random() < 0.05) sl.push("/ᐠ｡ꞈ｡ᐟ\\");
+        const sl = ["(˶ᵔᵕᵔ˶)", "( ๑ 🚀 ๑ )", "(๑>ᴗ<๑)", "(੭˃ᴗ˂)੭", "(๑•̀ㅂ•́)و"]; 
         nextStoneData = { 
             w, h, vertices: temp.map(v => ({ x: v.x * w, y: v.y * h })), 
             pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(),
-            emojiPair: { stable: sl[Math.floor(Math.random() * sl.length)], unstable: ["⊙ｏ⊙", "⊙﹏⊙"][Math.floor(Math.random() * 2)] }
+            emojiPair: { stable: sl[Math.floor(Math.random() * sl.length)], unstable: ["(°ロ°)", "(⊙﹏⊙)", "(;° 로°)"][Math.floor(Math.random() * 3)] }
         };
         
         let spawnY = 320;
@@ -695,11 +694,18 @@
         if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (!isGameStarted || isGameOver || e.target.id === 'start-overlay') return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        // 버튼 영역 터치 차단 (소원 빌기 버튼 & 오디오 컨트롤 버튼)
         const wr = document.getElementById('wish-btn').getBoundingClientRect();
-        if (x > wr.left - 20 && x < wr.right + 20 && y > wr.top - 20 && y < wr.bottom + 20) return;
+        const ar = document.getElementById('audio-control').getBoundingClientRect();
+        
+        const isNearWish = (x > wr.left - 20 && x < wr.right + 20 && y > wr.top - 20 && y < wr.bottom + 20);
+        const isNearAudio = (x > ar.left - 10 && x < ar.right + 10 && y > ar.top - 10 && y < ar.bottom + 10);
+        
+        if (isNearWish || isNearAudio) return;
+
         if (stones.filter(s => !s.isStatic).length === 0) { isPressing = true; initialTouchX = x; initialTouchY = y; initialStoneX = currentInputPos.x; initialStoneY = currentInputPos.y; checkValidity(); }
     };
-
     const handleMove = (e) => {
         if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (!isPressing) return;
@@ -712,7 +718,6 @@
         currentInputPos.y = Math.max(targetCameraY + 50, Math.min(limitY, initialStoneY + (y - initialTouchY)));
         checkValidity();
     };
-
     const handleEnd = () => {
         if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (isPressing) { isPressing = false; if (isValidLocation) dropStone(); }
@@ -732,17 +737,21 @@
         window.addEventListener('touchstart', (e) => {
             const onGamePage = document.getElementById('game-page').classList.contains('active');
             if (!onGamePage || isWishFlow) return;
-            // 오디오 버튼 및 모달 클릭 허용
+            
+            // 특정 UI 요소 터치는 기본 동작 유지
             if (e.target.id === 'audio-control' || e.target.id === 'audio-icon' || e.target.className === 'modal-btn') return;
+            
             if (isGameStarted && e.target.id !== 'wish-btn') e.preventDefault();
             handleStart(e);
         }, { passive: false });
+        
         window.addEventListener('mousemove', handleMove);
         window.addEventListener('touchmove', (e) => {
             const onGamePage = document.getElementById('game-page').classList.contains('active');
             if (!onGamePage || isWishFlow) return;
             if (isGameStarted) { e.preventDefault(); handleMove(e); }
         }, { passive: false });
+        
         window.addEventListener('mouseup', handleEnd);
         window.addEventListener('touchend', (e) => { if(isGameStarted) handleEnd(); });
     };
