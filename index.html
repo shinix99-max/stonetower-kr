@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>돌탑의 달인 - 소원 성취</title>
-    <!-- 오픈그래프(OG) 메타 태그 추가 -->
+    <!-- 오픈그래프(OG) 메타 태그 -->
     <meta property="og:title" content="돌탑의 달인 - 소원 성취">
     <meta property="og:description" content="당신의 소원을 돌탑에 담아보세요.">
     <meta property="og:type" content="website">
@@ -30,6 +30,16 @@
 
         .page { position: absolute; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; z-index: 10; color: white; text-align: center; }
         .page.active { display: flex; }
+
+        /* 오디오 컨트롤 스타일 */
+        #audio-control {
+            position: absolute; bottom: 30px; left: 30px; 
+            width: 44px; height: 44px; background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.3); border-radius: 50%;
+            display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 100; backdrop-filter: blur(5px);
+            font-size: 20px;
+        }
 
         #landing-page { background: linear-gradient(to bottom, #1a1a1a, #0a0a0a); z-index: 60; }
         .landing-illustration {
@@ -113,7 +123,7 @@
         .moon-icon { font-size: 100px; filter: drop-shadow(0 0 30px rgba(255, 255, 200, 0.9)); transform: translateY(150px); opacity: 0; transition: all 2.5s cubic-bezier(0.25, 0.1, 0.25, 1); }
         .moon-icon.rising { transform: translateY(-100px); opacity: 1; }
 
-        /* 커스텀 모달 스타일 (인스타그램 URL 표시 이슈 해결) */
+        /* 커스텀 모달 스타일 */
         #custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: #222; padding: 30px; border-radius: 20px; width: 80%; max-width: 350px; text-align: center; border: 1px solid #444; }
         .modal-msg { font-size: 18px; color: white; margin-bottom: 25px; line-height: 1.5; }
@@ -124,6 +134,14 @@
 
 <div id="game-wrapper">
     <div id="bg-layer"></div>
+
+    <!-- 배경음악 요소 -->
+    <audio id="bgm" src="./stonetower_bgm.mp3" loop></audio>
+    
+    <!-- 오디오 제어 버튼 -->
+    <div id="audio-control" onclick="toggleAudio()">
+        <span id="audio-icon">🔊</span>
+    </div>
 
     <div id="custom-modal">
         <div class="modal-content">
@@ -191,7 +209,8 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdldHVia2d4dGNjYm14eXB3a3VpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODMwNTcsImV4cCI6MjA4MjY1OTA1N30.GiGrkY1V27PluiWG6BL7dNLOK4U-XJruq0SDl1dV5Ho';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentSessionId = null; 
+    let currentSessionId = null;
+    let isMuted = false;
 
     const BG_IMAGES = {
         level1: 'url("./low_background_3.png")', 
@@ -219,6 +238,15 @@
     let currentInputPos = { x: 225, y: 320 };
     let isWishFlow = false; 
 
+    // 오디오 토글 함수
+    window.toggleAudio = () => {
+        const bgm = document.getElementById('bgm');
+        const icon = document.getElementById('audio-icon');
+        isMuted = !isMuted;
+        bgm.muted = isMuted;
+        icon.textContent = isMuted ? '🔇' : '🔊';
+    };
+
     function showModal(msg) {
         document.getElementById('modal-message').innerHTML = msg;
         document.getElementById('custom-modal').style.display = 'flex';
@@ -227,7 +255,6 @@
         document.getElementById('custom-modal').style.display = 'none';
     }
 
-    // 배경 이미지 프리로딩 함수
     function preloadBackgrounds() {
         Object.values(BG_IMAGES).forEach(url => {
             const cleanUrl = url.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
@@ -239,6 +266,14 @@
     window.showPage = (id) => {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+        
+        // 오디오 버튼 제어: 소원 적기 페이지에선 숨김, 그 외엔 보임
+        const audioBtn = document.getElementById('audio-control');
+        if (id === 'wish-page') {
+            audioBtn.style.display = 'none';
+        } else if (id !== 'landing-page') {
+            audioBtn.style.display = 'flex';
+        }
     };
 
     window.goToGame = () => {
@@ -246,6 +281,11 @@
         if (!input.value.trim()) { showModal("닉네임을 입력해주세요!"); return; }
         nickname = input.value.trim();
         document.getElementById('user-nickname-display').textContent = nickname;
+        
+        // 시작하기 버튼을 누르는 순간 음악 재생 시작
+        const bgm = document.getElementById('bgm');
+        bgm.play().catch(e => console.log("자동 재생이 차단되었습니다."));
+        
         window.showPage('game-page');
     };
 
@@ -264,7 +304,6 @@
                 .limit(1);
             
             const nextTrial = (trials && trials.length > 0) ? trials[0].trial + 1 : 1;
-            
             const { data } = await supabaseClient
                 .from('stone_towers')
                 .insert([{ nickname, trial: nextTrial, floor: 1, is_wish: 0 }])
@@ -660,6 +699,7 @@
         if (x > wr.left - 20 && x < wr.right + 20 && y > wr.top - 20 && y < wr.bottom + 20) return;
         if (stones.filter(s => !s.isStatic).length === 0) { isPressing = true; initialTouchX = x; initialTouchY = y; initialStoneX = currentInputPos.x; initialStoneY = currentInputPos.y; checkValidity(); }
     };
+
     const handleMove = (e) => {
         if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (!isPressing) return;
@@ -672,6 +712,7 @@
         currentInputPos.y = Math.max(targetCameraY + 50, Math.min(limitY, initialStoneY + (y - initialTouchY)));
         checkValidity();
     };
+
     const handleEnd = () => {
         if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (isPressing) { isPressing = false; if (isValidLocation) dropStone(); }
@@ -680,17 +721,20 @@
     window.onload = () => {
         if (window.decomp) Common.setDecomp(window.decomp);
         resetScreenHeight(); 
-        preloadBackgrounds(); // 배경 이미지 프리로드
+        preloadBackgrounds();
         initPhysics(); 
         updateEnvironment(1);
         initGroundDeco();
         loadGlobalStats();
+        
         window.addEventListener('resize', resetScreenHeight);
         window.addEventListener('mousedown', handleStart);
         window.addEventListener('touchstart', (e) => {
             const onGamePage = document.getElementById('game-page').classList.contains('active');
             if (!onGamePage || isWishFlow) return;
-            if (isGameStarted && e.target.id !== 'wish-btn' && e.target.id !== 'custom-modal' && e.target.className !== 'modal-btn') e.preventDefault();
+            // 오디오 버튼 및 모달 클릭 허용
+            if (e.target.id === 'audio-control' || e.target.id === 'audio-icon' || e.target.className === 'modal-btn') return;
+            if (isGameStarted && e.target.id !== 'wish-btn') e.preventDefault();
             handleStart(e);
         }, { passive: false });
         window.addEventListener('mousemove', handleMove);
