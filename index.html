@@ -113,7 +113,7 @@
         .moon-icon { font-size: 100px; filter: drop-shadow(0 0 30px rgba(255, 255, 200, 0.9)); transform: translateY(150px); opacity: 0; transition: all 2.5s cubic-bezier(0.25, 0.1, 0.25, 1); }
         .moon-icon.rising { transform: translateY(-100px); opacity: 1; }
 
-        /* 커스텀 모달 스타일 (인스타그램 URL 표시 해결용) */
+        /* 커스텀 모달 스타일 (인스타그램 URL 표시 이슈 해결) */
         #custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 1000; align-items: center; justify-content: center; }
         .modal-content { background: #222; padding: 30px; border-radius: 20px; width: 80%; max-width: 350px; text-align: center; border: 1px solid #444; }
         .modal-msg { font-size: 18px; color: white; margin-bottom: 25px; line-height: 1.5; }
@@ -125,7 +125,6 @@
 <div id="game-wrapper">
     <div id="bg-layer"></div>
 
-    <!-- 커스텀 모달 추가 -->
     <div id="custom-modal">
         <div class="modal-content">
             <div id="modal-message" class="modal-msg"></div>
@@ -188,12 +187,11 @@
 <script>
     const { Engine, Render, Runner, Bodies, Composite, Body, Events, Bounds, Vertices, SAT, Query, Common } = Matter;
 
-    // Supabase 설정
     const SUPABASE_URL = 'https://getubkgxtccbmxypwkui.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdldHVia2d4dGNjYm14eXB3a3VpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwODMwNTcsImV4cCI6MjA4MjY1OTA1N30.GiGrkY1V27PluiWG6BL7dNLOK4U-XJruq0SDl1dV5Ho';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentSessionId = null; // 현재 판의 DB ID를 저장
+    let currentSessionId = null; 
 
     const BG_IMAGES = {
         level1: 'url("./low_background_3.png")', 
@@ -219,9 +217,8 @@
     let gameWidth = 450; let gameHeight = 800;
     let nextStoneData = { w: 0, h: 0 };
     let currentInputPos = { x: 225, y: 320 };
-    let isWishFlow = false; // 소원 빌기 이후: 게임 입력(터치) 차단용
+    let isWishFlow = false; 
 
-    // 커스텀 알림 함수
     function showModal(msg) {
         document.getElementById('modal-message').innerHTML = msg;
         document.getElementById('custom-modal').style.display = 'flex';
@@ -230,7 +227,15 @@
         document.getElementById('custom-modal').style.display = 'none';
     }
 
-    // 전역 함수 등록
+    // 배경 이미지 프리로딩 함수
+    function preloadBackgrounds() {
+        Object.values(BG_IMAGES).forEach(url => {
+            const cleanUrl = url.replace(/url\(['"]?(.*?)['"]?\)/i, '$1');
+            const img = new Image();
+            img.src = cleanUrl;
+        });
+    }
+
     window.showPage = (id) => {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -250,7 +255,6 @@
         isGameStarted = true;
         document.getElementById('start-overlay').style.display = 'none';
         
-        // [Supabase] 기반석 드롭(게임 시작) 횟수 집계 및 세션 시작
         try {
             const { data: trials } = await supabaseClient
                 .from('stone_towers')
@@ -261,7 +265,6 @@
             
             const nextTrial = (trials && trials.length > 0) ? trials[0].trial + 1 : 1;
             
-            // 초기 floor는 1, is_wish는 0(진행중/실패)으로 시작
             const { data } = await supabaseClient
                 .from('stone_towers')
                 .insert([{ nickname, trial: nextTrial, floor: 1, is_wish: 0 }])
@@ -287,10 +290,9 @@
             setTimeout(() => moon.querySelector('.moon-icon').classList.add('rising'), 50);
         }
 
-        // 페이지 전환을 먼저 진행하여 사용자 체감 개선
         setTimeout(() => {
             window.showPage('wish-page');
-            captureFinalTower(); // 캡처는 배경에서 진행
+            captureFinalTower();
         }, 2500);
     };
 
@@ -304,15 +306,13 @@
         const finalImg = document.getElementById('final-screenshot');
         if (!finalImg || stones.length === 0) return;
 
-        // 1. 전체 돌탑의 범위 계산 (최상단 돌부터 기반석 바닥까지)
         const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
-        // 기반석 이동 반영: +50 추가
         const towerBottomY = gameHeight - currentBOffset + 50 + 25; 
         
         let minTopY = towerBottomY;
         stones.forEach(s => { if (s.bounds.min.y < minTopY) minTopY = s.bounds.min.y; });
         
-        const totalTowerHeight = 450; // 스크린샷 박스 높이와 동일하게 설정
+        const totalTowerHeight = 450;
         const captureWidth = gameWidth;
         
         const tempCanvas = document.createElement('canvas');
@@ -374,7 +374,6 @@
         render = Render.create({ element: container, engine, options: { width: gameWidth, height: gameHeight, wireframes: false, background: 'transparent', hasBounds: true } });
         
         const bOffset = isMobile ? 120 : 100;
-        // 기반석이 50px 더 아래로 내려가므로 바닥 충돌체 위치도 약간 조정
         ground = Bodies.rectangle(gameWidth / 2, gameHeight + 100 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: 'transparent' } });
         baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { friction: 10, frictionStatic: 1000, density: 200, chamfer: { radius: 25 }, label: 'baseStone', isStatic: true, emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, render: { fillStyle: '#dcdcdc' } });
         stones.push(baseStone); Composite.add(engine.world, [ground, baseStone]);
@@ -410,7 +409,6 @@
             [ground, ...stones].forEach(body => {
                 const { x, y } = body.position;
                 const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
-                // 요청사항: 기반석 위치를 돌 두께만큼 더 아래로 (+50)
                 const stopY = gameHeight - currentBOffset + 50; 
                 if (body.label === 'baseStone' && !body.isStatic && y >= stopY) { Body.setStatic(body, true); Body.setPosition(body, { x: gameWidth / 2, y: stopY }); }
                 if (!body.isStatic) { if (body.speed < 0.3 && body.angularSpeed < 0.05) { if (!body.stableStartTime) body.stableStartTime = now; else if (now - body.stableStartTime > 600) Body.setStatic(body, true); } else body.stableStartTime = null; }
@@ -517,7 +515,6 @@
         const wishText = document.getElementById('wish-text').value.trim();
         const currentFloor = stoneCount + 1;
         
-        // 1) 내 점수와 소원 업데이트
         if (currentSessionId) {
             try {
                 await supabaseClient
@@ -527,9 +524,7 @@
             } catch (err) {}
         }
 
-        // 2) 랭킹 데이터 조회
         try {
-            // 상위 3명 정보
             const { data: top3 } = await supabaseClient
                 .from('stone_towers')
                 .select('id, nickname, floor')
@@ -537,7 +532,6 @@
                 .order('floor', { ascending: false })
                 .limit(3);
 
-            // 나의 실제 등수 계산
             const { count: rankCount } = await supabaseClient
                 .from('stone_towers')
                 .select('*', { count: 'exact', head: true })
@@ -551,7 +545,6 @@
                     <thead><tr><th>등수</th><th>닉네임</th><th>층수</th></tr></thead>
                     <tbody>`;
                 
-                // 1, 2, 3위 출력
                 top3.forEach((item, idx) => {
                     let rankDisplay = (idx + 1) + "위";
                     if (idx === 0) rankDisplay = '<span class="rank-medal">🥇</span>';
@@ -566,12 +559,10 @@
                     </tr>`;
                 });
 
-                // 4위 행: "..."
                 html += `<tr class="rank-item">
                     <td colspan="3" style="text-align:center; color:#555; padding: 5px;">...</td>
                 </tr>`;
 
-                // 5위 자리: 나의 등수 (나의 현재 기록)
                 html += `<tr class="rank-item my-rank">
                     <td>${myRank}위</td>
                     <td>${nickname}</td>
@@ -606,7 +597,7 @@
             const w = 80 + Math.random() * 100;
             const h = w * (0.3 + Math.random() * 0.4);
             const x = Math.random() * (gameWidth + 150) - 75;
-            const baseLevelY = gameHeight - bOffset + 50; // 기반석 위치에 맞춰 데코도 약간 아래로
+            const baseLevelY = gameHeight - bOffset + 50; 
             const y = baseLevelY + 25 + (Math.random() * bOffset); 
             
             const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
@@ -633,11 +624,10 @@
             emojiPair: { stable: sl[Math.floor(Math.random() * sl.length)], unstable: ["⊙ｏ⊙", "⊙﹏⊙"][Math.floor(Math.random() * 2)] }
         };
         
-        // 요청사항: 8층(stoneCount 7)일때부터 10층 높이로, 11층(stoneCount 10)부터는 더 높게
         let spawnY = 320;
-        if (stoneCount >= 4 && stoneCount < 7) spawnY = 250; // 5~7층
-        else if (stoneCount >= 7 && stoneCount < 10) spawnY = 150; // 8~10층
-        else if (stoneCount >= 10) spawnY = 100; // 11층 이상 (기존 150보다 더 높임)
+        if (stoneCount >= 4 && stoneCount < 7) spawnY = 250; 
+        else if (stoneCount >= 7 && stoneCount < 10) spawnY = 150; 
+        else if (stoneCount >= 10) spawnY = 100; 
         
         currentInputPos = { x: gameWidth / 2, y: spawnY + targetCameraY };
     }
@@ -674,8 +664,12 @@
         if (isWishFlow || !document.getElementById('game-page').classList.contains('active')) return;
         if (!isPressing) return;
         const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
+        const limitY = gameHeight - currentBOffset + 75; 
+
         currentInputPos.x = Math.max(50, Math.min(gameWidth - 50, initialStoneX + (x - initialTouchX)));
-        currentInputPos.y = Math.max(targetCameraY + 50, Math.min(gameHeight - 250, initialStoneY + (y - initialTouchY)));
+        currentInputPos.y = Math.max(targetCameraY + 50, Math.min(limitY, initialStoneY + (y - initialTouchY)));
         checkValidity();
     };
     const handleEnd = () => {
@@ -685,7 +679,10 @@
 
     window.onload = () => {
         if (window.decomp) Common.setDecomp(window.decomp);
-        resetScreenHeight(); initPhysics(); updateEnvironment(1);
+        resetScreenHeight(); 
+        preloadBackgrounds(); // 배경 이미지 프리로드
+        initPhysics(); 
+        updateEnvironment(1);
         initGroundDeco();
         loadGlobalStats();
         window.addEventListener('resize', resetScreenHeight);
