@@ -84,8 +84,8 @@
 
         #result-page { background: #0a0a0a; overflow-y: auto; justify-content: flex-start; padding-top: 40px; padding-bottom: 60px; }
         #result-page.active { display: block; }
-        .screenshot-container { width: 95%; height: 400px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; }
-        #final-screenshot { width: 100%; height: auto; display: block; }
+        .screenshot-container { width: 95%; height: 400px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin: 0 auto 20px auto; border: 1px solid #333; background: #1a1a1a; overflow: hidden; position: relative; }
+        #final-screenshot { width: 100%; height: 100%; object-fit: cover; display: block; position: absolute; top: 0; left: 0; }
         .cheer-msg { font-size: 20px; font-weight: 700; margin-bottom: 30px; color: #ddd; }
         
         .retry-btn { 
@@ -112,12 +112,26 @@
         #moon-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.5); z-index: 100; pointer-events: none; }
         .moon-icon { font-size: 100px; filter: drop-shadow(0 0 30px rgba(255, 255, 200, 0.9)); transform: translateY(150px); opacity: 0; transition: all 2.5s cubic-bezier(0.25, 0.1, 0.25, 1); }
         .moon-icon.rising { transform: translateY(-100px); opacity: 1; }
+
+        /* 커스텀 모달 스타일 (인스타그램 URL 표시 해결용) */
+        #custom-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 1000; align-items: center; justify-content: center; }
+        .modal-content { background: #222; padding: 30px; border-radius: 20px; width: 80%; max-width: 350px; text-align: center; border: 1px solid #444; }
+        .modal-msg { font-size: 18px; color: white; margin-bottom: 25px; line-height: 1.5; }
+        .modal-btn { background: var(--primary); color: white; padding: 12px 30px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="game-wrapper">
     <div id="bg-layer"></div>
+
+    <!-- 커스텀 모달 추가 -->
+    <div id="custom-modal">
+        <div class="modal-content">
+            <div id="modal-message" class="modal-msg"></div>
+            <button class="modal-btn" onclick="closeModal()">확인</button>
+        </div>
+    </div>
 
     <section id="landing-page" class="page active">
         <div class="landing-illustration">
@@ -207,6 +221,15 @@
     let currentInputPos = { x: 225, y: 320 };
     let isWishFlow = false; // 소원 빌기 이후: 게임 입력(터치) 차단용
 
+    // 커스텀 알림 함수
+    function showModal(msg) {
+        document.getElementById('modal-message').innerHTML = msg;
+        document.getElementById('custom-modal').style.display = 'flex';
+    }
+    function closeModal() {
+        document.getElementById('custom-modal').style.display = 'none';
+    }
+
     // 전역 함수 등록
     window.showPage = (id) => {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -215,7 +238,7 @@
 
     window.goToGame = () => {
         const input = document.getElementById('nickname');
-        if (!input.value.trim()) { alert("닉네임을 입력해주세요!"); return; }
+        if (!input.value.trim()) { showModal("닉네임을 입력해주세요!"); return; }
         nickname = input.value.trim();
         document.getElementById('user-nickname-display').textContent = nickname;
         window.showPage('game-page');
@@ -272,7 +295,7 @@
     };
 
     window.finishGame = () => {
-        if (!document.getElementById('wish-text').value.trim()) { alert("소원을 입력해주세요!"); return; }
+        if (!document.getElementById('wish-text').value.trim()) { showModal("소원을 입력해주세요!"); return; }
         renderLeaderboard(); window.showPage('result-page');
     };
 
@@ -283,13 +306,12 @@
 
         // 1. 전체 돌탑의 범위 계산 (최상단 돌부터 기반석 바닥까지)
         const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
-        const towerBottomY = gameHeight - currentBOffset + 25; // 기반석 아랫면
+        // 기반석 이동 반영: +50 추가
+        const towerBottomY = gameHeight - currentBOffset + 50 + 25; 
         
         let minTopY = towerBottomY;
         stones.forEach(s => { if (s.bounds.min.y < minTopY) minTopY = s.bounds.min.y; });
         
-        // 스크린샷 캔버스 높이를 기반석 아랫면부터 꼭대기까지로 설정
-        // const towerActualHeight = towerBottomY - minTopY;
         const totalTowerHeight = 450; // 스크린샷 박스 높이와 동일하게 설정
         const captureWidth = gameWidth;
         
@@ -302,7 +324,6 @@
         const renderTower = (bg) => {
             ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             
-            // 배경 그리기
             if (bg) {
                 ctx.save(); ctx.globalAlpha = 0.25;
                 const scale = Math.max(tempCanvas.width / bg.width, tempCanvas.height / bg.height);
@@ -310,13 +331,9 @@
                 ctx.restore();
             }
 
-            // 모든 돌 그리기 (기반석 아랫면이 캔버스 하단에 딱 맞도록 오프셋 계산)
             const offsetY = tempCanvas.height - towerBottomY;
             ctx.save(); ctx.translate(0, offsetY);
             
-            // 바닥 데코는 스크린샷에서 제외하거나 최소화 (돌탑에 집중)
-            
-            // 돌탑 구성원들 (ground는 제외하여 불필요한 공백 제거)
             stones.forEach(body => {
                 const { x, y } = body.position;
                 ctx.save();
@@ -357,8 +374,8 @@
         render = Render.create({ element: container, engine, options: { width: gameWidth, height: gameHeight, wireframes: false, background: 'transparent', hasBounds: true } });
         
         const bOffset = isMobile ? 120 : 100;
-        // 하단 회색 박스 제거: fillStyle을 투명하게 하거나 배경색과 동일하게 처리
-        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 50 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: 'transparent' } });
+        // 기반석이 50px 더 아래로 내려가므로 바닥 충돌체 위치도 약간 조정
+        ground = Bodies.rectangle(gameWidth / 2, gameHeight + 100 - (bOffset - 25), gameWidth, bOffset + 100, { isStatic: true, label: 'ground', render: { fillStyle: 'transparent' } });
         baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { friction: 10, frictionStatic: 1000, density: 200, chamfer: { radius: 25 }, label: 'baseStone', isStatic: true, emojiPair: { stable: "●◡●", unstable: "⊙ｏ⊙" }, render: { fillStyle: '#dcdcdc' } });
         stones.push(baseStone); Composite.add(engine.world, [ground, baseStone]);
         
@@ -367,20 +384,16 @@
             const ctx = render.context; const now = Date.now();
             ctx.save(); ctx.translate(-render.bounds.min.x, -render.bounds.min.y);
 
-            // 1. 하단 회색 영역 데코레이션 (돌 쌓인 형상)
             groundDeco.forEach(deco => {
                 ctx.save(); ctx.translate(deco.x, deco.y); ctx.rotate(deco.angle);
                 ctx.fillStyle = deco.color;
                 ctx.beginPath(); deco.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.fill();
-                // 패턴
                 ctx.save(); ctx.clip(); drawStonePattern(ctx, deco.pattern, deco.seed, deco.w, deco.h); ctx.restore();
-                // 테두리 추가로 더 선명하게
                 ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1; ctx.stroke();
                 ctx.restore();
             });
 
-            // 2. 터치 전 대강의 점선 타원 가이드
-            if (isGameStarted && !isGameOver && !isPressing && !isWishFlow && stones.filter(s => !s.isStatic).length === 0) {
+            if (isGameStarted && !isGameOver && !isWishFlow && stones.filter(s => !s.isStatic).length === 0) {
                 ctx.save(); ctx.translate(currentInputPos.x, currentInputPos.y);
                 ctx.setLineDash([5, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2;
                 ctx.beginPath(); nextStoneData.vertices.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y)); ctx.closePath(); ctx.stroke();
@@ -397,7 +410,8 @@
             [ground, ...stones].forEach(body => {
                 const { x, y } = body.position;
                 const currentBOffset = (window.innerWidth <= 500) ? 120 : 100;
-                const stopY = gameHeight - currentBOffset;
+                // 요청사항: 기반석 위치를 돌 두께만큼 더 아래로 (+50)
+                const stopY = gameHeight - currentBOffset + 50; 
                 if (body.label === 'baseStone' && !body.isStatic && y >= stopY) { Body.setStatic(body, true); Body.setPosition(body, { x: gameWidth / 2, y: stopY }); }
                 if (!body.isStatic) { if (body.speed < 0.3 && body.angularSpeed < 0.05) { if (!body.stableStartTime) body.stableStartTime = now; else if (now - body.stableStartTime > 600) Body.setStatic(body, true); } else body.stableStartTime = null; }
                 ctx.save();
@@ -441,7 +455,6 @@
         isGameOver = true; 
         isPressing = false; 
 
-        // [Supabase] 무너졌을 때의 최종 층수 기록 (기반석 포함 현재 안정적이었던 층수는 stoneCount)
         if (currentSessionId) {
             supabaseClient
                 .from('stone_towers')
@@ -451,19 +464,16 @@
         }
 
         setTimeout(() => { 
-            alert("돌탑이 무너졌습니다! 다시 도전해보세요."); 
+            showModal("돌탑이 무너졌습니다!<br>다시 도전해보세요."); 
             
-            // 1. 기존 쌓인 돌들 제거
             stones.forEach(s => Composite.remove(engine.world, s));
             stones = [];
             
-            // 2. 게임 상태 초기화 (닉네임은 유지)
             stoneCount = 0;
             isGameOver = false;
             document.getElementById('count').textContent = "1";
             updateEnvironment(1);
             
-            // 3. 기반석 새로 생성하여 즉시 낙하
             baseStone = Bodies.rectangle(gameWidth / 2, -50, 160, 50, { 
                 friction: 10, 
                 frictionStatic: 1000, 
@@ -477,7 +487,6 @@
             stones.push(baseStone);
             Composite.add(engine.world, baseStone);
             
-            // [Supabase] 기반석 드롭(재시작) 시 트라이 추가 및 새 세션 시작
             try {
                 supabaseClient
                     .from('stone_towers')
@@ -498,7 +507,6 @@
                     });
             } catch (err) {}
             
-            // 4. 다음 돌 준비
             prepareNextStone();
         }, 800); 
     }
@@ -507,44 +515,68 @@
         const listEl = document.getElementById('leaderboard-list');
         if (!listEl) return;
         const wishText = document.getElementById('wish-text').value.trim();
+        const currentFloor = stoneCount + 1;
         
         // 1) 내 점수와 소원 업데이트
         if (currentSessionId) {
             try {
                 await supabaseClient
                     .from('stone_towers')
-                    .update({ floor: stoneCount + 1, wish: wishText, is_wish: 1 })
+                    .update({ floor: currentFloor, wish: wishText, is_wish: 1 })
                     .eq('id', currentSessionId);
             } catch (err) {}
         }
 
-        // 2) 랭킹 데이터 조회 (최대 5위까지 정보만 표시)
+        // 2) 랭킹 데이터 조회
         try {
-            const { data: rankData } = await supabaseClient
+            // 상위 3명 정보
+            const { data: top3 } = await supabaseClient
                 .from('stone_towers')
                 .select('id, nickname, floor')
                 .eq('is_wish', 1)
                 .order('floor', { ascending: false })
-                .limit(5);
+                .limit(3);
 
-            if (rankData) {
+            // 나의 실제 등수 계산
+            const { count: rankCount } = await supabaseClient
+                .from('stone_towers')
+                .select('*', { count: 'exact', head: true })
+                .eq('is_wish', 1)
+                .gt('floor', currentFloor);
+            
+            const myRank = (rankCount || 0) + 1;
+
+            if (top3) {
                 let html = `<table class="rank-table">
                     <thead><tr><th>등수</th><th>닉네임</th><th>층수</th></tr></thead>
                     <tbody>`;
                 
-                rankData.forEach((item, idx) => {
-                    const isMyRow = (currentSessionId && item.id === currentSessionId);
+                // 1, 2, 3위 출력
+                top3.forEach((item, idx) => {
                     let rankDisplay = (idx + 1) + "위";
                     if (idx === 0) rankDisplay = '<span class="rank-medal">🥇</span>';
                     else if (idx === 1) rankDisplay = '<span class="rank-medal">🥈</span>';
                     else if (idx === 2) rankDisplay = '<span class="rank-medal">🥉</span>';
 
+                    const isMyRow = (currentSessionId && item.id === currentSessionId);
                     html += `<tr class="rank-item ${isMyRow ? 'my-rank' : ''}">
                         <td>${rankDisplay}</td>
                         <td>${item.nickname}</td>
                         <td>${item.floor}층</td>
                     </tr>`;
                 });
+
+                // 4위 행: "..."
+                html += `<tr class="rank-item">
+                    <td colspan="3" style="text-align:center; color:#555; padding: 5px;">...</td>
+                </tr>`;
+
+                // 5위 자리: 나의 등수 (나의 현재 기록)
+                html += `<tr class="rank-item my-rank">
+                    <td>${myRank}위</td>
+                    <td>${nickname}</td>
+                    <td>${currentFloor}층</td>
+                </tr>`;
 
                 html += `</tbody></table>`;
                 listEl.innerHTML = html;
@@ -568,22 +600,19 @@
     function initGroundDeco() {
         groundDeco = [];
         const colors = ['#2d3436', '#404040', '#4b4b4b', '#5d5d5d', '#353535'];
-        const numStones = 70; // 개수를 대폭 늘림
+        const numStones = 70;
         const bOffset = (window.innerWidth <= 500 ? 120 : 100);
         for (let i = 0; i < numStones; i++) {
             const w = 80 + Math.random() * 100;
             const h = w * (0.3 + Math.random() * 0.4);
             const x = Math.random() * (gameWidth + 150) - 75;
-            
-            // 기반석 위치(gameHeight - bOffset)까지 돌무더기가 차오르도록 배치
-            const baseLevelY = gameHeight - bOffset;
-            const y = baseLevelY + 25 + (Math.random() * bOffset); // 기반석 아래부터 바닥까지 골고루
+            const baseLevelY = gameHeight - bOffset + 50; // 기반석 위치에 맞춰 데코도 약간 아래로
+            const y = baseLevelY + 25 + (Math.random() * bOffset); 
             
             const template = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
             const vertices = template.map(v => ({ x: v.x * w, y: v.y * h }));
             groundDeco.push({ x, y, vertices, color: colors[Math.floor(Math.random() * colors.length)], angle: (Math.random() - 0.5) * 2.5, pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(), w, h });
         }
-        // Y좌표 기준으로 정렬하여 뒤쪽 돌이 먼저 그려지게 함
         groundDeco.sort((a, b) => a.y - b.y);
     }
 
@@ -603,10 +632,12 @@
             pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(),
             emojiPair: { stable: sl[Math.floor(Math.random() * sl.length)], unstable: ["⊙ｏ⊙", "⊙﹏⊙"][Math.floor(Math.random() * 2)] }
         };
-        // 열번째 돌(stoneCount >= 9)부터는 생성 위치를 더 높게(150) 조정
+        
+        // 요청사항: 8층(stoneCount 7)일때부터 10층 높이로, 11층(stoneCount 10)부터는 더 높게
         let spawnY = 320;
-        if (stoneCount >= 4 && stoneCount < 9) spawnY = 250;
-        else if (stoneCount >= 9) spawnY = 150;
+        if (stoneCount >= 4 && stoneCount < 7) spawnY = 250; // 5~7층
+        else if (stoneCount >= 7 && stoneCount < 10) spawnY = 150; // 8~10층
+        else if (stoneCount >= 10) spawnY = 100; // 11층 이상 (기존 150보다 더 높임)
         
         currentInputPos = { x: gameWidth / 2, y: spawnY + targetCameraY };
     }
@@ -656,14 +687,13 @@
         if (window.decomp) Common.setDecomp(window.decomp);
         resetScreenHeight(); initPhysics(); updateEnvironment(1);
         initGroundDeco();
-        // [Supabase] 전체 돌탑 누적 횟수 로드
         loadGlobalStats();
         window.addEventListener('resize', resetScreenHeight);
         window.addEventListener('mousedown', handleStart);
         window.addEventListener('touchstart', (e) => {
             const onGamePage = document.getElementById('game-page').classList.contains('active');
             if (!onGamePage || isWishFlow) return;
-            if (isGameStarted && e.target.id !== 'wish-btn') e.preventDefault();
+            if (isGameStarted && e.target.id !== 'wish-btn' && e.target.id !== 'custom-modal' && e.target.className !== 'modal-btn') e.preventDefault();
             handleStart(e);
         }, { passive: false });
         window.addEventListener('mousemove', handleMove);
