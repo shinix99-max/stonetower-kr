@@ -656,7 +656,7 @@
     function prepareNextStone() {
         const w = 110 + Math.random() * 40; const h = w * 0.6;
         const temp = SHAPE_TEMPLATES[Math.floor(Math.random() * SHAPE_TEMPLATES.length)];
-        const sl = ["●◡●", "(●'◡'●)"]; if (Math.random() < 0.05) sl.push("/ᐠ｡ꞈ｡ᐟ\\");
+        const sl = ["●◡●", "(●'◡'●)"]; if (Math.random() < 0.05) sl.push("/ᐠ｡.｡ᐟ\\");
         nextStoneData = { 
             w, h, vertices: temp.map(v => ({ x: v.x * w, y: v.y * h })), 
             pattern: ['sedimentary', 'basalt', 'granite'][Math.floor(Math.random() * 3)], seed: Math.random(),
